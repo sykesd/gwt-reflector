@@ -1,0 +1,338 @@
+package org.dt.reflector.rebind;
+
+import java.io.PrintWriter;
+import java.lang.annotation.Annotation;
+
+import org.dt.reflector.client.Reflector;
+
+import com.google.gwt.core.ext.Generator;
+import com.google.gwt.core.ext.GeneratorContext;
+import com.google.gwt.core.ext.TreeLogger;
+import com.google.gwt.core.ext.UnableToCompleteException;
+import com.google.gwt.core.ext.typeinfo.JAnnotationMethod;
+import com.google.gwt.core.ext.typeinfo.JAnnotationType;
+import com.google.gwt.core.ext.typeinfo.JClassType;
+import com.google.gwt.core.ext.typeinfo.JField;
+import com.google.gwt.core.ext.typeinfo.JMethod;
+import com.google.gwt.core.ext.typeinfo.JPrimitiveType;
+import com.google.gwt.core.ext.typeinfo.JType;
+import com.google.gwt.user.rebind.ClassSourceFileComposerFactory;
+import com.google.gwt.user.rebind.SourceWriter;
+
+/*
+ * Copyright (c) 2011, David Sykes and Tomasz Orzechowski 
+ * All rights reserved.
+ * 
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ * 
+ * - Redistributions of source code must retain the above copyright notice, this
+ * list of conditions and the following disclaimer.
+ * 
+ * - Redistributions in binary form must reproduce the above copyright notice,
+ * this list of conditions and the following disclaimer in the documentation
+ * and/or other materials provided with the distribution.
+ * 
+ * - Neither the name David Sykes nor Tomasz Orzechowski may be used to endorse
+ * or promote products derived from this software without specific prior written
+ * permission.
+ * 
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE. * @author Administrator
+ * 
+ * 
+ */
+
+/**
+ * <p>Generator to generate an implementation of the Reflector interface for a particular type</p>
+ * 
+ * <p>TODO describe the pre-requisites and limitations</p>
+ * 
+ * @author David Sykes
+ * @author Tomasz Orzechowski
+ * @version 0.1
+ *
+ */
+public class ReflectorGenerator extends Generator {
+
+  @Override
+  public String generate(TreeLogger logger, GeneratorContext context, String typeName) throws UnableToCompleteException {
+    JClassType typeToReflect = context.getTypeOracle().findType(typeName);
+    
+    String implPackageName = typeToReflect.getPackage().getName();
+    String implTypeName = typeToReflect.getSimpleSourceName()+"$ReflectorImpl";
+    
+    ClassSourceFileComposerFactory composerFactory = new ClassSourceFileComposerFactory(implPackageName, implTypeName);
+
+    composerFactory.addImport(Annotation.class.getName());
+    composerFactory.addImplementedInterface(Reflector.class.getName());
+
+    PrintWriter printWriter = context.tryCreate(logger, implPackageName, implTypeName);
+    if (printWriter != null) {
+      SourceWriter sourceWriter = composerFactory.createSourceWriter(context, printWriter);
+      composeConstructor(sourceWriter, typeToReflect);
+      composeClassType(sourceWriter, typeToReflect);
+      composePropertyType(sourceWriter, typeToReflect);
+      composeHasAnnotations(sourceWriter, context, typeToReflect);
+      composeGet(sourceWriter, typeToReflect);
+      composeSet(sourceWriter, typeToReflect);
+      sourceWriter.commit(logger);
+    }
+    
+    return implPackageName + "." + implTypeName;    
+  }
+
+  /**
+   * The "constructor" is the implementation of Reflector.newInstance()
+   * We require that the type we are reflecting has a no-args constructor, so the implementation
+   * is a simple on-line method that creates a new instance of this type
+   * 
+   * @param out the writer on which we are generating the source
+   * @param typeToReflect the type we are reflecting
+   */
+  private void composeConstructor(SourceWriter out, JClassType typeToReflect) {
+    out.println("\n@Override");
+    out.println("public Object newInstance() { return new "+typeToReflect.getQualifiedSourceName()+"(); }");
+  }
+  
+  /**
+   * Generate the implementation of Reflector.type(), which returns the type we are reflecting
+   * 
+   * @param out the writer on which we are generating the source
+   * @param typeToReflect the type we are reflecting
+   */
+  private void composeClassType(SourceWriter out, JClassType typeToReflect) {
+    out.println("\n@Override");
+    out.println("public Class<?> type() { return " + typeToReflect.getQualifiedSourceName()+ ".class; }");
+  }
+  
+  /**
+   * Generate the implementation of the Reflector.type(String propertyName) method
+   * 
+   * We take a very simple approach and generate a list of if statements that look
+   * for the requested property name and return the type of that property
+   * 
+   * @param out the writer on which we are generating the source
+   * @param typeToReflect the type we are reflecting
+   */
+  private void composePropertyType(SourceWriter out, JClassType typeToReflect) {
+    out.println("\n@Override");
+    out.println("public Class<?> type(String propertyName) {");
+    
+    composeTypeGetters(out, typeToReflect);
+    
+    out.println("  return null;");
+    out.println("}");
+  }
+
+  private void composeTypeGetters(SourceWriter out, JClassType typeToReflect) {
+    for (JField field : typeToReflect.getFields()) {
+      String getterMethod = isPublicReadable(field, typeToReflect);
+      if (getterMethod != null) {
+        out.println("  if (propertyName.equals(\"" + field.getName() + "\")) {");
+        out.println("    return " + field.getType().getQualifiedSourceName()+ ".class;");
+        out.println("  }");
+      }
+    }
+    
+    /*
+     * Recurse through all of the super classes to make sure we get a complete 
+     * list of all the properties
+     */
+    JClassType superType = typeToReflect.getSuperclass();
+    if (superType != null && !superType.getSimpleSourceName().equals("Object")) {
+      composeTypeGetters(out, superType);
+    }
+  }
+  
+  /**
+   * Generate the implementation of Reflector.get(Object, String)
+   * 
+   * We take a very simple approach and generate a list of if statements that look
+   * for the requested property name and then call the public getter for that property
+   * 
+   * @param out the writer on which we are generating the source
+   * @param typeToReflect the type we are reflecting
+   */
+  private void composeGet(SourceWriter out, JClassType typeToReflect) {
+    out.println("\n@Override");
+    out.println("public Object get(Object rawInstance, String propertyName) {");
+    
+    out.println("  "+typeToReflect.getQualifiedSourceName()+" instance = ("+typeToReflect.getQualifiedSourceName()+") rawInstance;");
+    
+    composeGetters(out, typeToReflect);
+    
+    out.println("  return null;");
+    out.println("}");
+  }
+
+  private void composeGetters(SourceWriter out, JClassType typeToReflect) {
+    for (JField field : typeToReflect.getFields()) {
+      if (field.getType().isPrimitive() != null) continue;
+      
+      String getterMethod = isPublicReadable(field, typeToReflect);
+      if (getterMethod != null) {
+        out.println("  if (propertyName.equals(\"" + field.getName() + "\")) {");
+        out.println("    return instance."+getterMethod+"();");
+        out.println("  }");
+      }
+    }
+
+    /*
+     * Recurse through all super classes to make sure we get a complete 
+     * list of all the properties
+     */
+    JClassType superType = typeToReflect.getSuperclass();
+    if (superType != null && !superType.getSimpleSourceName().equals("Object")) {
+      composeGetters(out, superType);
+    }
+  }
+
+  /**
+   * Generate the implementation of Reflector.set(Object, String, Object)
+   * 
+   * We take a very simple approach and generate a list of if statements that look
+   * for the requested property name and then call the public setter for that property
+   * 
+   * @param out the writer on which we are generating the source
+   * @param typeToReflect the type we are reflecting
+   */
+  private void composeSet(SourceWriter out, JClassType typeToReflect) {
+    out.println("@Override");
+    out.println("public void set(Object rawInstance, String propertyName, Object value) {");
+    
+    out.println("  "+typeToReflect.getQualifiedSourceName()+" instance = ("+typeToReflect.getQualifiedSourceName()+") rawInstance;");
+    
+    composeSetters(out, typeToReflect);
+    
+    out.println("}");
+  }
+
+  private void composeSetters(SourceWriter out, JClassType typeToReflect) {
+    for (JField field : typeToReflect.getFields()) {
+      if (field.getType().isPrimitive() != null) continue;
+      
+      String setterMethod = isPublicWriteable(field, typeToReflect);
+      if (setterMethod != null) {
+        out.println("  if (propertyName.equals(\"" + field.getName() + "\")) {");
+        out.println("    instance."+setterMethod+"( (" + field.getType().getQualifiedSourceName() + ") value);");
+        out.println("  }");
+      }
+    }
+    
+    JClassType superType = typeToReflect.getSuperclass();
+    if (superType != null && !superType.getSimpleSourceName().equals("Object")) {
+      composeSetters(out, superType);
+    }
+  }
+
+  /**
+   * Generate the implementation of Reflector.hasAnnotation(String, Class)
+   * 
+   * We take a very simple approach and generate a list of if statements that look
+   * for the requested property name and then call the public setter for that property
+   * 
+   * @param out the writer on which we are generating the source
+   * @param context the generation context
+   * @param typeToReflect the type we are reflecting
+   */
+  private void composeHasAnnotations(SourceWriter out, GeneratorContext context, JClassType typeToReflect) {
+    out.println("\n@Override");
+    out.println("public <T extends Annotation> T hasAnnotation(String propertyName, Class<T> annotationClass) {");
+    
+    composeAnnotationGetters(out, context, typeToReflect);
+    
+    out.println("  return null;");
+    out.println("}");
+  }
+
+  private void composeAnnotationGetters(SourceWriter out, GeneratorContext context, JClassType typeToReflect) {
+    for (JField field : typeToReflect.getFields()) {
+      String getterMethod = isPublicReadable(field, typeToReflect);
+      if (getterMethod != null) {
+        out.println("  if (propertyName.equals(\"" + field.getName() + "\")) {");
+        
+        Annotation[] annotations = field.getAnnotations();
+        for (Annotation annotation : annotations) {
+          out.println("    if (annotationClass == "+annotation.annotationType().getName()+".class) {");
+          generateAnnotationImpl(out, context, annotation);
+          out.println("    }");
+        }
+        
+        out.println("  }");
+      }
+    }
+    
+    JClassType superType = typeToReflect.getSuperclass();
+    if (superType != null && !superType.getSimpleSourceName().equals("Object")) {
+      composeAnnotationGetters(out, context, superType);
+    }
+  }
+  
+  private void generateAnnotationImpl(SourceWriter out, GeneratorContext context, Annotation annotation) {
+    JClassType rawAnnoType = context.getTypeOracle().findType(annotation.annotationType().getName());
+    JAnnotationType annoType = rawAnnoType.isAnnotation();
+    
+    out.println("  return (T) new "+annoType.getQualifiedSourceName()+"() {");
+    out.println("      @Override public Class<? extends Annotation> annotationType() { return "+annoType.getQualifiedSourceName()+".class; }");
+    
+    for (JMethod method : annoType.getMethods()) {
+      JAnnotationMethod annoMethod = method.isAnnotationMethod();
+      if (annoMethod == null) continue;
+
+      JType returnType = annoMethod.getReturnType();
+      JPrimitiveType primitiveType = returnType.isPrimitive();
+      // FIXME for now we only support integer properties
+      try {
+        if (primitiveType == JPrimitiveType.INT) {
+          Object annoValue = annotation.annotationType().getMethod(annoMethod.getName()).invoke(annotation);
+          out.println("      @Override public int "+annoMethod.getName()+"() { return "+ annoValue + "; }");
+        }
+      }
+      catch (Exception ex) {
+        throw new IllegalArgumentException("Could not generate annotation method: "+annoMethod.getName(), ex);
+      }
+    }
+    out.println("    };");
+  }
+
+  private String isPublicReadable(JField field, JClassType typeToReflect) {
+    // the reflectable property is not one we need to get at runtime, so don't
+    // consider it publicly readable
+    if ("reflectable".equals(field.getName())) return null;
+    
+    String getter = getterName(field);
+    JMethod method = typeToReflect.findMethod(getter, new JType[]{});
+    return (method != null ? method.getName() : null);
+  }
+  
+  private String isPublicWriteable(JField field, JClassType typeToReflect) {
+    String setter = setterName(field);
+    JMethod method = typeToReflect.findMethod(setter, new JType[]{field.getType()});
+    return (method != null ? method.getName() : null);
+  }
+  
+  private String getterName(JField field) {
+    String prefix = "get";
+    if ("java.lang.Boolean".equals(field.getType().getQualifiedSourceName())) {
+      prefix = "is";
+    }
+    
+    String fieldName = field.getName();
+    return prefix + fieldName.substring(0, 1).toUpperCase()+fieldName.substring(1); 
+  }
+  
+  private String setterName(JField field) {
+    String fieldName = field.getName();
+    return "set" + fieldName.substring(0, 1).toUpperCase()+fieldName.substring(1); 
+  }
+}
