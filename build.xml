@@ -1,0 +1,53 @@
+<?xml version="1.0"?>
+<project name="gwt-reflector" default="package" xmlns:ivy="antlib:org.apache.ivy.ant" >
+
+  <target name="init">
+    <property name="source" value="${basedir}/src" />
+    <property name="classes" value="${basedir}/classes" />
+    <property name="lib" value="${basedir}/lib" />
+    
+    <property name="version" value="0.1" />
+  </target>
+  
+  
+  <target name="clean" depends="init">
+    <delete dir="${classes}" />
+    <delete dir="${lib}" />
+    <delete dir="${bin}" />
+
+    <delete>
+      <fileset dir="${basedir}" includes="gwt-reflector*.jar" />
+    </delete>
+    
+    <mkdir dir="${classes}" />
+  </target>
+  
+  <target name="resolve" description="Retrieve dependencies with ivy">
+    <ivy:retrieve />
+  </target>
+  
+  <target name="compile" depends="init,resolve">
+    <javac srcdir="${source}" destdir="${classes}"
+           debug="${debug}"
+           optimize="${optimize}"
+           deprecation="off">
+      <classpath>
+        <fileset dir="${lib}" includes="*.jar" />
+      </classpath>
+    </javac>
+  </target>
+  
+  <target name="package" depends="init,clean,resolve,compile">
+    <!-- The is the main target to create the distributable .jar file -->
+    
+    <!-- We need to copy the source files across so the GWT compiler can compile the classes as well -->
+    <copy todir="${classes}" >
+      <fileset dir="${source}" excludes="**/*.java"/>
+    </copy>
+
+    <!-- Put everything in ${classes} into the .jar file -->
+    <jar jarfile="${basedir}/${ant.project.name}-${version}.jar" basedir="${classes}"/>
+    
+  </target>
+  
+</project>
