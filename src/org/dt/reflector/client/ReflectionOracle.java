@@ -1,5 +1,7 @@
 package org.dt.reflector.client;
 
+import com.google.gwt.core.client.GWT;
+
 
 /*
  * Copyright (c) 2011, David Sykes and Tomasz Orzechowski 
@@ -34,28 +36,19 @@ package org.dt.reflector.client;
  * 
  */
 
-/**
- * <p>Marker interface for reflection generation.</p>
- * 
- * <p>Idiomatic usage is:
- * 
- *   public class MyType implements Reflectable {
- *     ...
- *   }
- * 
- * 
- *   public class ReflectiveClient {
- *     public Object getProperty(Reflectable r, String propertyName) {
- *       return  ReflectionOracle.Util.getReflector(r.getClass().getName()).get(r, propertyName);
- *     }
- *   }
- *   
- *  
- * @author David Sykes
- * @author Tomasz Orzechowski
- * @since 0.1
- *
- */
-public interface Reflectable {
+public interface ReflectionOracle {
+
+  Reflector getReflector(String typeName);
+  
+  public static class Util {
+    private static ReflectionOracle instance;
+    
+    public static Reflector getReflector(String typeName) {
+      if (instance == null) {
+        instance = GWT.create(ReflectionOracle.class);
+      }
+      return instance.getReflector(typeName);
+    }
+  }
   
 }

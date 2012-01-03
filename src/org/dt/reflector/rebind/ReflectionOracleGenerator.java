@@ -1,0 +1,115 @@
+package org.dt.reflector.rebind;
+
+
+import java.io.PrintWriter;
+
+import org.dt.reflector.client.Reflectable;
+import org.dt.reflector.client.ReflectionOracle;
+
+import com.google.gwt.core.client.GWT;
+import com.google.gwt.core.ext.Generator;
+import com.google.gwt.core.ext.GeneratorContext;
+import com.google.gwt.core.ext.TreeLogger;
+import com.google.gwt.core.ext.UnableToCompleteException;
+import com.google.gwt.core.ext.typeinfo.JClassType;
+import com.google.gwt.user.rebind.ClassSourceFileComposerFactory;
+import com.google.gwt.user.rebind.SourceWriter;
+
+
+/*
+ * Copyright (c) 2011, David Sykes and Tomasz Orzechowski 
+ * All rights reserved.
+ * 
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ * 
+ * - Redistributions of source code must retain the above copyright notice, this
+ * list of conditions and the following disclaimer.
+ * 
+ * - Redistributions in binary form must reproduce the above copyright notice,
+ * this list of conditions and the following disclaimer in the documentation
+ * and/or other materials provided with the distribution.
+ * 
+ * - Neither the name David Sykes nor Tomasz Orzechowski may be used to endorse
+ * or promote products derived from this software without specific prior written
+ * permission.
+ * 
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE. * @author Administrator
+ * 
+ * 
+ */
+
+/**
+ * Generator to generate an implementation of the ReflectionOracle interface
+ * 
+ * <p>
+ * TODO describe the pre-requisites and limitations
+ * 
+ * @author David Sykes
+ * @author Tomasz Orzechowski
+ * @version 0.1
+ *
+ */
+public class ReflectionOracleGenerator extends Generator {
+
+  @Override
+  public String generate(TreeLogger logger, GeneratorContext context, String typeName) throws UnableToCompleteException {
+    JClassType oracleType = context.getTypeOracle().findType(typeName);
+    
+    String implPackageName = oracleType.getPackage().getName();
+    String implTypeName = oracleType.getSimpleSourceName()+"_OracleImpl";
+    
+    ClassSourceFileComposerFactory composerFactory = new ClassSourceFileComposerFactory(implPackageName, implTypeName);
+
+    composerFactory.addImport(GWT.class.getName());
+    composerFactory.addImplementedInterface(ReflectionOracle.class.getName());
+    
+    PrintWriter printWriter = context.tryCreate(logger, implPackageName, implTypeName);
+    if (printWriter != null) {
+      SourceWriter out = composerFactory.createSourceWriter(context, printWriter);
+      
+      out.println("\n@Override");
+      out.println("public Reflector getReflector(String typeName) {");
+      
+      JClassType markerType = context.getTypeOracle().findType(Reflectable.class.getName());
+      
+      for (JClassType type : context.getTypeOracle().getTypes()) {
+        if (hasMarkerInterface(type, markerType)) {
+          out.println("  if (\""+type.getQualifiedSourceName()+"\".equals(typeName)) return GWT.create("+type.getQualifiedSourceName()+".class"+");");
+        }
+      }
+      
+      out.println("  return null;");
+      out.println("}");
+      
+      out.commit(logger);
+    }
+    
+    return implPackageName + "." + implTypeName;    
+  }
+
+
+  /**
+   * Does the given class implement the requested marker interface?
+   * 
+   * @param type the type we are checking
+   * @param markerIntf the marker interface we are looking for
+   * @return true if the given type implements the requested marker interface
+   */
+  private boolean hasMarkerInterface(JClassType type, JClassType markerIntf) {
+    for (JClassType intf : type.getImplementedInterfaces()) {
+      if (intf == markerIntf) return true;
+    }
+    return false;
+  }
+}

@@ -3,17 +3,25 @@
 
   <target name="init">
     <property name="source" value="${basedir}/src" />
+    <property name="test-source" value="${basedir}/test-src" />
     <property name="classes" value="${basedir}/classes" />
+    <property name="test-classes" value="${basedir}/test-classes" />
+    <property name="test-reports" value="${basedir}/test-reports" />
     <property name="lib" value="${basedir}/lib" />
+    <property name="test-lib" value="${basedir}/lib-test" />
     
     <property name="version" value="0.1" />
+  	
+  	<property name="product-jar" value="${basedir}/${ant.project.name}-${version}.jar" />
   </target>
   
   
   <target name="clean" depends="init">
     <delete dir="${classes}" />
     <delete dir="${lib}" />
-    <delete dir="${bin}" />
+    <delete dir="${test-classes}" />
+    <delete dir="${test-lib}" />
+    <delete dir="${test-reports}" />
 
     <delete>
       <fileset dir="${basedir}" includes="gwt-reflector*.jar" />
@@ -23,7 +31,8 @@
   </target>
   
   <target name="resolve" description="Retrieve dependencies with ivy">
-    <ivy:retrieve />
+    <ivy:retrieve conf="prod" pattern="${lib}/[artifact].[ext]" />
+    <ivy:retrieve conf="test" pattern="${test-lib}/[artifact].[ext]" />
   </target>
   
   <target name="compile" depends="init,resolve">
@@ -35,18 +44,61 @@
         <fileset dir="${lib}" includes="*.jar" />
       </classpath>
     </javac>
-  </target>
-  
-  <target name="package" depends="init,clean,resolve,compile">
-    <!-- The is the main target to create the distributable .jar file -->
     
     <!-- We need to copy the source files across so the GWT compiler can compile the classes as well -->
     <copy todir="${classes}" >
-      <fileset dir="${source}" excludes="**/*.java"/>
+      <fileset dir="${source}" />
     </copy>
+  </target>
+  
+  <target name="compile-tests" depends="init,compile,resolve">
+    <mkdir dir="${test-classes}" />
+
+    <!-- Compile all of the the test cases -->
+    <javac srcdir="${test-source}" destdir="${test-classes}"
+           debug="${debug}"
+           optimize="${optimize}"
+           deprecation="off">
+      <classpath>
+        <pathelement location="${classes}" />
+        <fileset dir="${test-lib}" includes="*.jar" />
+        <fileset dir="${lib}" includes="*.jar" />
+      </classpath>
+    </javac>
+    
+    <copy todir="${test-classes}" >
+      <fileset dir="${test-source}" />
+    </copy>
+  </target>
+  
+  
+  <target name="test" depends="init,compile-tests">
+    <mkdir dir="${test-reports}" />
+    
+    <junit fork="yes" printsummary="yes" haltonfailure="yes">
+      <formatter type="plain" />
+      
+      <classpath>
+        <pathelement location="${test-classes}" />
+        <pathelement location="${classes}" />
+        <fileset dir="${test-lib}" includes="*.jar" />
+        <fileset dir="${lib}" includes="*.jar" />
+      </classpath>
+      
+      <batchtest todir="${test-reports}">
+        <fileset dir="${test-source}">
+          <include name="**/*Test.java" />
+        </fileset>
+      </batchtest>
+    </junit>
+  </target>
+  
+	
+  <target name="package" depends="init,clean,resolve,compile,test">
+    <!-- The is the main target to create the distributable .jar file -->
 
     <!-- Put everything in ${classes} into the .jar file -->
-    <jar jarfile="${basedir}/${ant.project.name}-${version}.jar" basedir="${classes}"/>
+    <jar jarfile="${product-jar}" basedir="${classes}"/>
     
   </target>
   

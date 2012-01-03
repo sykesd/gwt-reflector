@@ -1,5 +1,8 @@
 package org.dt.reflector.client;
 
+import java.math.BigDecimal;
+
+import com.google.gwt.junit.client.GWTTestCase;
 
 /*
  * Copyright (c) 2011, David Sykes and Tomasz Orzechowski 
@@ -34,28 +37,40 @@ package org.dt.reflector.client;
  * 
  */
 
-/**
- * <p>Marker interface for reflection generation.</p>
- * 
- * <p>Idiomatic usage is:
- * 
- *   public class MyType implements Reflectable {
- *     ...
- *   }
- * 
- * 
- *   public class ReflectiveClient {
- *     public Object getProperty(Reflectable r, String propertyName) {
- *       return  ReflectionOracle.Util.getReflector(r.getClass().getName()).get(r, propertyName);
- *     }
- *   }
- *   
- *  
- * @author David Sykes
- * @author Tomasz Orzechowski
- * @since 0.1
- *
- */
-public interface Reflectable {
+public class ReflectorTest extends GWTTestCase {
+
+  @Override
+  public String getModuleName() { return "org.dt.reflector.Reflector"; }
   
+  public void testOracle() {
+    assertNotNull(ReflectionOracle.Util.getReflector(SimpleBean.class.getName()));
+  }
+  
+  public void testSimpleGenerator() {
+    SimpleBean bean = createSampleBean();
+    
+    assertEquals("Test", PropertyUtils.getProperty(bean, "name"));
+    assertEquals(0, new BigDecimal("123456789123456789").compareTo((BigDecimal) PropertyUtils.getProperty(bean, "largeValue")));
+    assertEquals(new Integer(32000), PropertyUtils.getProperty(bean, "smallValue"));
+  }
+
+  
+  public void testReflectedCreation() {
+    SimpleBean bean = (SimpleBean) ReflectionOracle.Util.getReflector(SimpleBean.class.getName()).newInstance();
+    PropertyUtils.setProperty(bean, "name", "Tester");
+    PropertyUtils.setProperty(bean, "largeValue", BigDecimal.valueOf(321));
+    PropertyUtils.setProperty(bean, "smallValue", Integer.valueOf(128));
+    
+    assertEquals("Tester", bean.getName());
+    assertEquals(Integer.valueOf(128), bean.getSmallValue());
+    assertEquals(0, BigDecimal.valueOf(321).compareTo(bean.getLargeValue()));
+  }
+  
+  private SimpleBean createSampleBean() {
+    SimpleBean bean = new SimpleBean();
+    bean.setName("Test");
+    bean.setLargeValue(new BigDecimal("123456789123456789"));
+    bean.setSmallValue(32000);
+    return bean;
+  }
 }

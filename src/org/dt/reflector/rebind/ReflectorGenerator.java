@@ -69,7 +69,7 @@ public class ReflectorGenerator extends Generator {
     JClassType typeToReflect = context.getTypeOracle().findType(typeName);
     
     String implPackageName = typeToReflect.getPackage().getName();
-    String implTypeName = typeToReflect.getSimpleSourceName()+"$ReflectorImpl";
+    String implTypeName = typeToReflect.getSimpleSourceName()+"_ReflectorImpl";
     
     ClassSourceFileComposerFactory composerFactory = new ClassSourceFileComposerFactory(implPackageName, implTypeName);
 
@@ -90,7 +90,7 @@ public class ReflectorGenerator extends Generator {
     
     return implPackageName + "." + implTypeName;    
   }
-
+  
   /**
    * The "constructor" is the implementation of Reflector.newInstance()
    * We require that the type we are reflecting has a no-args constructor, so the implementation

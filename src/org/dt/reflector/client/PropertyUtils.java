@@ -1,6 +1,5 @@
 package org.dt.reflector.client;
 
-
 /*
  * Copyright (c) 2011, David Sykes and Tomasz Orzechowski 
  * All rights reserved.
@@ -35,27 +34,52 @@ package org.dt.reflector.client;
  */
 
 /**
- * <p>Marker interface for reflection generation.</p>
+ * Provide a simple set of API methods, similar in form to Apache Commons BeanUtils PropertyUtils class
+ * for setting/getting property values on instances of beans that implement {@link Reflectable}
  * 
- * <p>Idiomatic usage is:
- * 
- *   public class MyType implements Reflectable {
- *     ...
- *   }
- * 
- * 
- *   public class ReflectiveClient {
- *     public Object getProperty(Reflectable r, String propertyName) {
- *       return  ReflectionOracle.Util.getReflector(r.getClass().getName()).get(r, propertyName);
- *     }
- *   }
- *   
- *  
  * @author David Sykes
  * @author Tomasz Orzechowski
  * @since 0.1
- *
+ * 
  */
-public interface Reflectable {
+public class PropertyUtils {
+
+  /**
+   * Get the current value of the property with the given name from the given {@link Reflectable} instance
+   * 
+   * <p>
+   * This just calls the {@link Reflector#get(Object, String)} method to retrieve the value.
+   * 
+   * @param r the {@link Reflectable} from which we want to read the property value
+   * @param name the property we want to read
+   * @return the current value of the requested property
+   */
+  public static Object getProperty(Reflectable r, String name) {
+    return getReflector(r.getClass()).get(r, name);
+  }
   
+  /**
+   * Set the current value of the property with the given name on the given Reflectable instance
+   * 
+   * <p>
+   * This just calss the {@link Reflector#set(Object, String, Object)} method to set the value
+   * 
+   * @param r the {@link Reflectable} on which we want to set the property value
+   * @param name the property we want to set
+   * @param value the new value to set the property to
+   */
+  public static void setProperty(Reflectable r, String name, Object value) {
+    getReflector(r.getClass()).set(r, name, value);
+  }
+  
+
+  /**
+   * Convenience method to get access to the {@link Reflector} for the given type
+   * 
+   * @param type the type for which we want the reflector
+   * @return the {@link Reflector} for the given type
+   */
+  public static Reflector getReflector(Class<? extends Reflectable> type) {
+    return ReflectionOracle.Util.getReflector(type.getName());
+  }
 }
