@@ -10,4 +10,16 @@ The goals of the project are:
 *  Provide an easy way to read and write properties of JavaBean like objects
 *  Provide an easy way to read the type of properties of JavaBean like objects
 
+**Usage**
+
+Add `<inherits name="org.dt.reflector.Reflector" />` to your .gwt.xml file.
+
+Add `implements org.dt.reflector.Reflectable` to any of your Java classes that you would like to inspect at runtime.
+
+Make calls to the helper methods in `org.dt.reflector.PropertyUtils` to get/set values or to get the types of the 
+properties, for example:
+
+    Object o = ...  // some type that implements Reflectable
+    Object value = PropertyUtils.getProperty( (Reflectable) o, "name" );
+    
 
