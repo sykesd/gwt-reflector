@@ -1,5 +1,7 @@
 package org.dt.reflector.client;
 
+import java.lang.annotation.Annotation;
+
 /*
  * Copyright (c) 2011, David Sykes and Tomasz Orzechowski 
  * All rights reserved.
@@ -62,7 +64,7 @@ public class PropertyUtils {
    * Set the current value of the property with the given name on the given Reflectable instance
    * 
    * <p>
-   * This just calss the {@link Reflector#set(Object, String, Object)} method to set the value
+   * This just calls the {@link Reflector#set(Object, String, Object)} method to set the value
    * 
    * @param r the {@link Reflectable} on which we want to set the property value
    * @param name the property we want to set
@@ -72,6 +74,32 @@ public class PropertyUtils {
     getReflector(r.getClass()).set(r, name, value);
   }
   
+  /**
+   * Get the type of property with the given name on the given Reflectable instance
+   * 
+   * This just calls the {@link Reflector#type(String)} method
+   * 
+   * @param r the {@link Reflectable} on which we want to get the property type
+   * @param name the property we want the type of
+   * @return the type of the property on the given Reflectable instance
+   */
+  public static Class<?> getType(Reflectable r, String name) {
+    return getReflector(r.getClass()).type(name);
+  }
+  
+  /**
+   * Does the given property have the given annotation?
+   * 
+   * This just calls the {@link Reflector#hasAnnotation(String, Class)} method 
+   * 
+   * @param r the {@link Reflectable} on which we want to get the annotation
+   * @param name the property we want the annotation for
+   * @param annotationClass the annotation we want
+   * @return the annotation instance if one exists, or null if not
+   */
+  public static <T extends Annotation> T hasAnnotation(Reflectable r, String name, Class<T> annotationClass) {
+    return getReflector(r.getClass()).hasAnnotation(name, annotationClass);
+  }
 
   /**
    * Convenience method to get access to the {@link Reflector} for the given type

@@ -79,6 +79,7 @@ public class ReflectorGenerator extends Generator {
     PrintWriter printWriter = context.tryCreate(logger, implPackageName, implTypeName);
     if (printWriter != null) {
       SourceWriter sourceWriter = composerFactory.createSourceWriter(context, printWriter);
+      
       composeConstructor(sourceWriter, typeToReflect);
       composeClassType(sourceWriter, typeToReflect);
       composePropertyType(sourceWriter, typeToReflect);

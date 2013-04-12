@@ -84,7 +84,7 @@ public class ReflectionOracleGenerator extends Generator {
       JClassType markerType = context.getTypeOracle().findType(Reflectable.class.getName());
       
       for (JClassType type : context.getTypeOracle().getTypes()) {
-        if (hasMarkerInterface(type, markerType)) {
+        if (hasMarkerInterface(type, markerType) && !type.isAbstract()) {
           out.println("  if (\""+type.getQualifiedSourceName()+"\".equals(typeName)) return GWT.create("+type.getQualifiedSourceName()+".class"+");");
         }
       }
@@ -110,6 +110,11 @@ public class ReflectionOracleGenerator extends Generator {
     for (JClassType intf : type.getImplementedInterfaces()) {
       if (intf == markerIntf) return true;
     }
+
+    if (type.getSuperclass() != null) {
+      return hasMarkerInterface(type.getSuperclass(), markerIntf);
+    }
+
     return false;
   }
 }

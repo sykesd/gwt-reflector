@@ -37,6 +37,12 @@ package org.dt.reflector.client;
 /**
  * <p>Marker interface for reflection generation.</p>
  * 
+ * Any type that implements this interface, or has a super-class that implements this interface
+ * can be interrogated at runtime using reflection.
+ * 
+ * The {@link PropertyUtils} class provides convenient, familiar, access methods for performing 
+ * this interrogation.
+ * 
  * <p>Idiomatic usage is:
  * 
  *   public class MyType implements Reflectable {
@@ -44,11 +50,9 @@ package org.dt.reflector.client;
  *   }
  * 
  * 
- *   public class ReflectiveClient {
- *     public Object getProperty(Reflectable r, String propertyName) {
- *       return  ReflectionOracle.Util.getReflector(r.getClass().getName()).get(r, propertyName);
- *     }
- *   }
+ *   Object o = new MyType();
+ *   ...
+ *   Object value = PropertyUtils.getProperty( (Reflectable) o, "property" );
  *   
  *  
  * @author David Sykes
