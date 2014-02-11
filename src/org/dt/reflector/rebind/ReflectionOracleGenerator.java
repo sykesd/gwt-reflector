@@ -2,14 +2,22 @@ package org.dt.reflector.rebind;
 
 
 import java.io.PrintWriter;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
-import org.dt.reflector.client.Reflectable;
 import org.dt.reflector.client.ReflectionOracle;
+import org.dt.reflector.rebind.finder.TypeToReflect;
+import org.dt.reflector.rebind.finder.TypesToReflectFinder;
 
 import com.google.gwt.core.client.GWT;
+import com.google.gwt.core.ext.BadPropertyValueException;
 import com.google.gwt.core.ext.Generator;
 import com.google.gwt.core.ext.GeneratorContext;
 import com.google.gwt.core.ext.TreeLogger;
+import com.google.gwt.core.ext.TreeLogger.Type;
 import com.google.gwt.core.ext.UnableToCompleteException;
 import com.google.gwt.core.ext.typeinfo.JClassType;
 import com.google.gwt.user.rebind.ClassSourceFileComposerFactory;
@@ -17,7 +25,7 @@ import com.google.gwt.user.rebind.SourceWriter;
 
 
 /*
- * Copyright (c) 2011, David Sykes and Tomasz Orzechowski 
+ * Copyright (c) 2011-2014, David Sykes and Tomasz Orzechowski 
  * All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
@@ -81,12 +89,8 @@ public class ReflectionOracleGenerator extends Generator {
       out.println("\n@Override");
       out.println("public Reflector getReflector(String typeName) {");
       
-      JClassType markerType = context.getTypeOracle().findType(Reflectable.class.getName());
-      
-      for (JClassType type : context.getTypeOracle().getTypes()) {
-        if (hasMarkerInterface(type, markerType) && !type.isAbstract()) {
-          out.println("  if (\""+type.getQualifiedSourceName()+"\".equals(typeName)) return GWT.create("+type.getQualifiedSourceName()+".class"+");");
-        }
+      for (TypeToReflect type : findTypesToReflect(logger, context)) {
+        out.println("  if (\""+type.getQualifiedSourceName()+"\".equals(typeName)) return "+type.getCreateExpression()+";");
       }
       
       out.println("  return null;");
@@ -98,23 +102,45 @@ public class ReflectionOracleGenerator extends Generator {
     return implPackageName + "." + implTypeName;    
   }
 
-
-  /**
-   * Does the given class implement the requested marker interface?
-   * 
-   * @param type the type we are checking
-   * @param markerIntf the marker interface we are looking for
-   * @return true if the given type implements the requested marker interface
-   */
-  private boolean hasMarkerInterface(JClassType type, JClassType markerIntf) {
-    for (JClassType intf : type.getImplementedInterfaces()) {
-      if (intf == markerIntf) return true;
+  private Set<TypeToReflect> findTypesToReflect(TreeLogger logger, GeneratorContext context) throws UnableToCompleteException {
+    Set<TypeToReflect> typesToReflect = new HashSet<TypeToReflect>();
+    
+    for (TypesToReflectFinder finder : findTypeFinders(logger, context)) {
+      typesToReflect.addAll( finder.findTypes(logger, context) );
     }
-
-    if (type.getSuperclass() != null) {
-      return hasMarkerInterface(type.getSuperclass(), markerIntf);
-    }
-
-    return false;
+    
+    return typesToReflect;
   }
+  
+  private static final String TYPE_FINDER_PROPERTY = "org.dt.reflector.rebind.finder.typefinder";
+  
+  private List<TypesToReflectFinder> findTypeFinders(TreeLogger logger, GeneratorContext context) {
+    List<String> finderClassNames = null;
+    try {
+      finderClassNames = findTypeFinderClassNames(context);
+    }
+    catch (BadPropertyValueException ex) {
+      logger.log(Type.ERROR, "Error reading configuration property: "+TYPE_FINDER_PROPERTY, ex);
+      return Collections.emptyList();
+    }
+    
+    List<TypesToReflectFinder> finders = new ArrayList<TypesToReflectFinder>();
+    for (String className : finderClassNames) {
+      TypesToReflectFinder finder = null;
+      try {
+        finder = (TypesToReflectFinder) Class.forName(className).newInstance();
+        finders.add( finder );
+      }
+      catch (Exception ex) {
+        logger.log(Type.ERROR, "Error loading TypesToReflectFinder: "+className, ex);
+      }
+    }
+    
+    return finders;
+  }
+  
+  private List<String> findTypeFinderClassNames(GeneratorContext context) throws BadPropertyValueException {
+    return context.getPropertyOracle().getConfigurationProperty(TYPE_FINDER_PROPERTY).getValues();
+  }
+  
 }

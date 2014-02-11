@@ -13,7 +13,11 @@
     <when-type-assignable class="org.dt.reflector.client.ReflectionOracle" />
   </generate-with>
   
-
+  <!-- Define the configuration property with which we define the classes that locate the types to reflect for us -->
+  <!-- and at the same time define the default type finder so that it is always present -->
+  <define-configuration-property name="org.dt.reflector.rebind.finder.typefinder" is-multi-valued="true" />
+  <extend-configuration-property name="org.dt.reflector.rebind.finder.typefinder" value="org.dt.reflector.rebind.finder.ReflectableTypesFinder" />
+  
   <!-- Specify the paths for translatable code                    -->
   <source path='client'/>
 
