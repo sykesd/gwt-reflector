@@ -20,7 +20,7 @@ import com.google.gwt.user.rebind.ClassSourceFileComposerFactory;
 import com.google.gwt.user.rebind.SourceWriter;
 
 /*
- * Copyright (c) 2011, David Sykes and Tomasz Orzechowski 
+ * Copyright (c) 2011-2014, David Sykes and Tomasz Orzechowski 
  * All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
@@ -95,14 +95,24 @@ public class ReflectorGenerator extends Generator {
   /**
    * The "constructor" is the implementation of Reflector.newInstance()
    * We require that the type we are reflecting has a no-args constructor, so the implementation
-   * is a simple on-line method that creates a new instance of this type
+   * is a simple one-line method that creates a new instance of this type
+   * 
+   * If it does not have a public no-args constructor, the implementation will throw an exception
    * 
    * @param out the writer on which we are generating the source
    * @param typeToReflect the type we are reflecting
    */
   private void composeConstructor(SourceWriter out, JClassType typeToReflect) {
+    if (ReflectionUtil.hasPublicNoArgsConstructor(typeToReflect)) {
+      out.println("\n@Override");
+      out.println("public Object newInstance() { return new "+typeToReflect.getQualifiedSourceName()+"(); }");
+      return;
+    }
+    
+    // no constructor - have the implementation throw an exception
+    // it will still be possible to reflect on an instance, assuming you get the instance from somewhere else
     out.println("\n@Override");
-    out.println("public Object newInstance() { return new "+typeToReflect.getQualifiedSourceName()+"(); }");
+    out.println("public Object newInstance() { throw new RuntimeException(\"No public no-args constructor!\"); }");
   }
   
   /**
@@ -137,7 +147,7 @@ public class ReflectorGenerator extends Generator {
 
   private void composeTypeGetters(SourceWriter out, JClassType typeToReflect) {
     for (JField field : typeToReflect.getFields()) {
-      String getterMethod = isPublicReadable(field, typeToReflect);
+      String getterMethod = ReflectionUtil.isPublicReadable(field, typeToReflect);
       if (getterMethod != null) {
         out.println("  if (propertyName.equals(\"" + field.getName() + "\")) {");
         out.println("    return " + field.getType().getQualifiedSourceName()+ ".class;");
@@ -180,7 +190,7 @@ public class ReflectorGenerator extends Generator {
     for (JField field : typeToReflect.getFields()) {
       if (field.getType().isPrimitive() != null) continue;
       
-      String getterMethod = isPublicReadable(field, typeToReflect);
+      String getterMethod = ReflectionUtil.isPublicReadable(field, typeToReflect);
       if (getterMethod != null) {
         out.println("  if (propertyName.equals(\"" + field.getName() + "\")) {");
         out.println("    return instance."+getterMethod+"();");
@@ -222,7 +232,7 @@ public class ReflectorGenerator extends Generator {
     for (JField field : typeToReflect.getFields()) {
       if (field.getType().isPrimitive() != null) continue;
       
-      String setterMethod = isPublicWriteable(field, typeToReflect);
+      String setterMethod = ReflectionUtil.isPublicWriteable(field, typeToReflect);
       if (setterMethod != null) {
         out.println("  if (propertyName.equals(\"" + field.getName() + "\")) {");
         out.println("    instance."+setterMethod+"( (" + field.getType().getQualifiedSourceName() + ") value);");
@@ -258,7 +268,7 @@ public class ReflectorGenerator extends Generator {
 
   private void composeAnnotationGetters(SourceWriter out, GeneratorContext context, JClassType typeToReflect) {
     for (JField field : typeToReflect.getFields()) {
-      String getterMethod = isPublicReadable(field, typeToReflect);
+      String getterMethod = ReflectionUtil.isPublicReadable(field, typeToReflect);
       if (getterMethod != null) {
         out.println("  if (propertyName.equals(\"" + field.getName() + "\")) {");
         
@@ -305,35 +315,5 @@ public class ReflectorGenerator extends Generator {
     }
     out.println("    };");
   }
-
-  private String isPublicReadable(JField field, JClassType typeToReflect) {
-    // the reflectable property is not one we need to get at runtime, so don't
-    // consider it publicly readable
-    if ("reflectable".equals(field.getName())) return null;
-    
-    String getter = getterName(field);
-    JMethod method = typeToReflect.findMethod(getter, new JType[]{});
-    return (method != null ? method.getName() : null);
-  }
   
-  private String isPublicWriteable(JField field, JClassType typeToReflect) {
-    String setter = setterName(field);
-    JMethod method = typeToReflect.findMethod(setter, new JType[]{field.getType()});
-    return (method != null ? method.getName() : null);
-  }
-  
-  private String getterName(JField field) {
-    String prefix = "get";
-    if ("java.lang.Boolean".equals(field.getType().getQualifiedSourceName())) {
-      prefix = "is";
-    }
-    
-    String fieldName = field.getName();
-    return prefix + fieldName.substring(0, 1).toUpperCase()+fieldName.substring(1); 
-  }
-  
-  private String setterName(JField field) {
-    String fieldName = field.getName();
-    return "set" + fieldName.substring(0, 1).toUpperCase()+fieldName.substring(1); 
-  }
 }

@@ -3,6 +3,7 @@
 
   <target name="init">
     <property name="source" value="${basedir}/src" />
+    <property name="resources" value="${basedir}/resources" />
     <property name="test-source" value="${basedir}/test-src" />
     <property name="classes" value="${basedir}/classes" />
     <property name="test-classes" value="${basedir}/test-classes" />
@@ -10,7 +11,8 @@
     <property name="lib" value="${basedir}/lib" />
     <property name="test-lib" value="${basedir}/lib-test" />
     
-    <property name="version" value="0.3.0" />
+    <property name="version" value="0.3.1" />
+  	<filter token="version" value="${version}" />
   	
   	<property name="product-jar" value="${basedir}/${ant.project.name}-${version}.jar" />
   </target>
@@ -28,7 +30,10 @@
     </delete>
     
     <mkdir dir="${classes}" />
-  </target>
+  	
+  	<copy todir="${source}" overwrite="true" filtering="true">
+      <fileset dir="${resources}"/>
+ 	</copy>  </target>
   
   <target name="resolve" description="Retrieve dependencies with ivy">
     <ivy:retrieve conf="prod" pattern="${lib}/[artifact].[ext]" />
