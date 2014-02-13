@@ -33,6 +33,7 @@ public class ReflectionUtil {
     
     String getter = getterName(field);
     JMethod method = typeToReflect.findMethod(getter, new JType[]{});
+    if (method != null && !method.isPublic()) return null;
     return (method != null ? method.getName() : null);
   }
   
@@ -46,6 +47,7 @@ public class ReflectionUtil {
   public static String isPublicWriteable(JField field, JClassType typeToReflect) {
     String setter = setterName(field);
     JMethod method = typeToReflect.findMethod(setter, new JType[]{field.getType()});
+    if (method != null && !method.isPublic()) return null;
     return (method != null ? method.getName() : null);
   }
   
