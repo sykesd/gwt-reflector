@@ -42,6 +42,7 @@ public class ReflectableTypesFinder implements TypesToReflectFinder {
   private boolean hasMarkerInterface(JClassType type, JClassType markerIntf) {
     for (JClassType intf : type.getImplementedInterfaces()) {
       if (intf == markerIntf) return true;
+      if (hasMarkerInterface(intf, markerIntf)) return true;
     }
 
     if (type.getSuperclass() != null) {
