@@ -5,7 +5,7 @@ import java.math.BigDecimal;
 import com.google.gwt.junit.client.GWTTestCase;
 
 /*
- * Copyright (c) 2011, David Sykes and Tomasz Orzechowski 
+ * Copyright (c) 2011-2014, David Sykes and Tomasz Orzechowski 
  * All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
@@ -66,8 +66,24 @@ public class ReflectorTest extends GWTTestCase {
     assertEquals(0, BigDecimal.valueOf(321).compareTo(bean.getLargeValue()));
   }
   
+  public void testSubclassedMarker() {
+    SubSimpleBean bean = createSubSampleBean();
+    
+    assertEquals("Test", PropertyUtils.getProperty(bean, "name"));
+    assertEquals(0, new BigDecimal("123456789123456789").compareTo((BigDecimal) PropertyUtils.getProperty(bean, "largeValue")));
+    assertEquals(new Integer(32000), PropertyUtils.getProperty(bean, "smallValue"));
+  }
+  
   private SimpleBean createSampleBean() {
     SimpleBean bean = new SimpleBean();
+    bean.setName("Test");
+    bean.setLargeValue(new BigDecimal("123456789123456789"));
+    bean.setSmallValue(32000);
+    return bean;
+  }
+  
+  private SubSimpleBean createSubSampleBean() {
+    SubSimpleBean bean = new SubSimpleBean();
     bean.setName("Test");
     bean.setLargeValue(new BigDecimal("123456789123456789"));
     bean.setSmallValue(32000);

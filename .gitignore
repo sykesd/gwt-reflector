@@ -3,6 +3,7 @@
 #################
 lib-test/
 test-classes/
+www-test/
 gwt-unitCache/
 war/
 test-reports/
