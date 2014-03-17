@@ -84,6 +84,7 @@ public class ReflectorGenerator extends Generator {
       composeClassType(sourceWriter, typeToReflect);
       composePropertyType(sourceWriter, typeToReflect);
       composeHasAnnotations(sourceWriter, context, typeToReflect);
+      composeList(sourceWriter, typeToReflect);
       composeGet(sourceWriter, typeToReflect);
       composeSet(sourceWriter, typeToReflect);
       sourceWriter.commit(logger);
@@ -163,6 +164,36 @@ public class ReflectorGenerator extends Generator {
     if (superType != null && !superType.getSimpleSourceName().equals("Object")) {
       composeTypeGetters(out, superType);
     }
+  }
+  /**
+   * Generate the implementation of Reflector.list(Object)
+   * 
+   * @param out the writer on which we are generating the source
+   * @param typeToReflect the type we are reflecting
+   */
+  private void composeList(SourceWriter out, JClassType typeToReflect) {
+    
+    /* Static variable */
+    out.print("private String [] propertyList = new String[] {");
+    boolean first = true;
+    for(JField field: typeToReflect.getFields()) {
+      String getterMethod = ReflectionUtil.isPublicReadable(field, typeToReflect);
+      if (getterMethod != null) {
+       if(first) {
+         out.println("");
+       } else {
+         out.println(",");
+       }
+       out.print("   \"" + field.getName() + "\"");
+       first = false;
+      }
+    }
+    out.println("\n};");
+
+    out.println("\n@Override");
+    out.println("public String[] list(Object rawInstance) {");
+    out.println("  return propertyList;");
+    out.println("}");
   }
   
   /**

@@ -95,6 +95,17 @@ public interface Reflector {
   Object newInstance();
   
   /**
+   * List properties from the given instance
+   * 
+   * See the comment on type(String propertyName) for an explanation
+   * of which types are reflected
+   * 
+   * @param o the object we want to read the property of
+   * @return the list of the property
+   */
+  String[] list(Object o);
+
+  /**
    * Get the value of the given property from the given instance
    * 
    * See the comment on type(String propertyName) for an explanation
