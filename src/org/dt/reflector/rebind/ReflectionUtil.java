@@ -59,7 +59,8 @@ public class ReflectionUtil {
    */
   public static String getterName(JField field) {
     String prefix = "get";
-    if ("java.lang.Boolean".equals(field.getType().getQualifiedSourceName())) {
+    String qsn = field.getType().getQualifiedSourceName();
+    if ("java.lang.Boolean".equals(qsn) || "boolean".equals(qsn)) {
       prefix = "is";
     }
     
