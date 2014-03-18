@@ -52,6 +52,7 @@ import com.google.gwt.user.rebind.SourceWriter;
  * 
  */
 
+
 /**
  * <p>Generator to generate an implementation of the Reflector interface for a particular type</p>
  * 
@@ -219,12 +220,16 @@ public class ReflectorGenerator extends Generator {
 
   private void composeGetters(SourceWriter out, JClassType typeToReflect) {
     for (JField field : typeToReflect.getFields()) {
-      if (field.getType().isPrimitive() != null) continue;
-      
+      String wrapBegin = "";
+      String wrapEnd = "";
+      if (field.getType().isPrimitive() != null) {
+        wrapBegin = "new " + field.getType().isPrimitive().getQualifiedBoxedSourceName() + "(";
+        wrapEnd = ")";
+      }
       String getterMethod = ReflectionUtil.isPublicReadable(field, typeToReflect);
       if (getterMethod != null) {
         out.println("  if (propertyName.equals(\"" + field.getName() + "\")) {");
-        out.println("    return instance."+getterMethod+"();");
+        out.println("    return " + wrapBegin + "instance."+getterMethod+"()" + wrapEnd + ";");
         out.println("  }");
       }
     }
@@ -261,12 +266,15 @@ public class ReflectorGenerator extends Generator {
 
   private void composeSetters(SourceWriter out, JClassType typeToReflect) {
     for (JField field : typeToReflect.getFields()) {
-      if (field.getType().isPrimitive() != null) continue;
+      String sourceName = field.getType().getQualifiedSourceName();
+      if (field.getType().isPrimitive() != null) {
+        sourceName = field.getType().isPrimitive().getQualifiedBoxedSourceName();
+      }
       
       String setterMethod = ReflectionUtil.isPublicWriteable(field, typeToReflect);
       if (setterMethod != null) {
         out.println("  if (propertyName.equals(\"" + field.getName() + "\")) {");
-        out.println("    instance."+setterMethod+"( (" + field.getType().getQualifiedSourceName() + ") value);");
+        out.println("    instance."+setterMethod+"( (" + sourceName + ") value);");
         out.println("  }");
       }
     }
