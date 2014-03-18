@@ -1,5 +1,7 @@
 package org.dt.reflector.rebind;
 
+import java.util.HashSet;
+import java.util.Set;
 import java.io.PrintWriter;
 import java.lang.annotation.Annotation;
 
@@ -166,6 +168,24 @@ public class ReflectorGenerator extends Generator {
       composeTypeGetters(out, superType);
     }
   }
+
+  private void _composeList(JClassType typeToReflect, Set<String> properties) {
+    for(JField field: typeToReflect.getFields()) {
+      String getterMethod = ReflectionUtil.isPublicReadable(field, typeToReflect);
+      if (getterMethod != null) {
+        properties.add(field.getName());
+      }
+    }
+    /*
+     * Recurse through all super classes to make sure we get a complete 
+     * list of all the properties
+     */
+    JClassType superType = typeToReflect.getSuperclass();
+    if (superType != null && !superType.getSimpleSourceName().equals("Object")) {
+      _composeList(superType, properties);
+    }
+  }
+
   /**
    * Generate the implementation of Reflector.list(Object)
    * 
@@ -177,17 +197,16 @@ public class ReflectorGenerator extends Generator {
     /* Static variable */
     out.print("private String [] propertyList = new String[] {");
     boolean first = true;
-    for(JField field: typeToReflect.getFields()) {
-      String getterMethod = ReflectionUtil.isPublicReadable(field, typeToReflect);
-      if (getterMethod != null) {
-       if(first) {
-         out.println("");
-       } else {
-         out.println(",");
-       }
-       out.print("   \"" + field.getName() + "\"");
-       first = false;
+    Set<String> properties = new HashSet<String>();
+    _composeList(typeToReflect, properties);
+    for(String property: properties) {
+      if(first) {
+        out.println("");
+      } else {
+        out.println(",");
       }
+      out.print("   \"" + property + "\"");
+      first = false;
     }
     out.println("\n};");
 
