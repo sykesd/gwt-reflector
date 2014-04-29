@@ -11,7 +11,7 @@
     <property name="lib" value="${basedir}/lib" />
     <property name="test-lib" value="${basedir}/lib-test" />
     
-    <property name="version" value="0.3.2" />
+    <property name="version" value="0.4.0" />
   	<filter token="version" value="${version}" />
   	
   	<property name="product-jar" value="${basedir}/${ant.project.name}-${version}.jar" />

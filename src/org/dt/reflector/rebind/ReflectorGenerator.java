@@ -1,5 +1,7 @@
 package org.dt.reflector.rebind;
 
+import java.util.HashSet;
+import java.util.Set;
 import java.io.PrintWriter;
 import java.lang.annotation.Annotation;
 
@@ -52,6 +54,7 @@ import com.google.gwt.user.rebind.SourceWriter;
  * 
  */
 
+
 /**
  * <p>Generator to generate an implementation of the Reflector interface for a particular type</p>
  * 
@@ -84,6 +87,7 @@ public class ReflectorGenerator extends Generator {
       composeClassType(sourceWriter, typeToReflect);
       composePropertyType(sourceWriter, typeToReflect);
       composeHasAnnotations(sourceWriter, context, typeToReflect);
+      composeList(sourceWriter, typeToReflect);
       composeGet(sourceWriter, typeToReflect);
       composeSet(sourceWriter, typeToReflect);
       sourceWriter.commit(logger);
@@ -164,6 +168,53 @@ public class ReflectorGenerator extends Generator {
       composeTypeGetters(out, superType);
     }
   }
+
+  private void _composeList(JClassType typeToReflect, Set<String> properties) {
+    for(JField field: typeToReflect.getFields()) {
+      String getterMethod = ReflectionUtil.isPublicReadable(field, typeToReflect);
+      if (getterMethod != null) {
+        properties.add(field.getName());
+      }
+    }
+    /*
+     * Recurse through all super classes to make sure we get a complete 
+     * list of all the properties
+     */
+    JClassType superType = typeToReflect.getSuperclass();
+    if (superType != null && !superType.getSimpleSourceName().equals("Object")) {
+      _composeList(superType, properties);
+    }
+  }
+
+  /**
+   * Generate the implementation of Reflector.list(Object)
+   * 
+   * @param out the writer on which we are generating the source
+   * @param typeToReflect the type we are reflecting
+   */
+  private void composeList(SourceWriter out, JClassType typeToReflect) {
+    
+    /* Static variable */
+    out.print("private String [] propertyList = new String[] {");
+    boolean first = true;
+    Set<String> properties = new HashSet<String>();
+    _composeList(typeToReflect, properties);
+    for(String property: properties) {
+      if(first) {
+        out.println("");
+      } else {
+        out.println(",");
+      }
+      out.print("   \"" + property + "\"");
+      first = false;
+    }
+    out.println("\n};");
+
+    out.println("\n@Override");
+    out.println("public String[] list(Object rawInstance) {");
+    out.println("  return propertyList;");
+    out.println("}");
+  }
   
   /**
    * Generate the implementation of Reflector.get(Object, String)
@@ -188,12 +239,16 @@ public class ReflectorGenerator extends Generator {
 
   private void composeGetters(SourceWriter out, JClassType typeToReflect) {
     for (JField field : typeToReflect.getFields()) {
-      if (field.getType().isPrimitive() != null) continue;
-      
+      String wrapBegin = "";
+      String wrapEnd = "";
+      if (field.getType().isPrimitive() != null) {
+        wrapBegin = "new " + field.getType().isPrimitive().getQualifiedBoxedSourceName() + "(";
+        wrapEnd = ")";
+      }
       String getterMethod = ReflectionUtil.isPublicReadable(field, typeToReflect);
       if (getterMethod != null) {
         out.println("  if (propertyName.equals(\"" + field.getName() + "\")) {");
-        out.println("    return instance."+getterMethod+"();");
+        out.println("    return " + wrapBegin + "instance."+getterMethod+"()" + wrapEnd + ";");
         out.println("  }");
       }
     }
@@ -230,12 +285,15 @@ public class ReflectorGenerator extends Generator {
 
   private void composeSetters(SourceWriter out, JClassType typeToReflect) {
     for (JField field : typeToReflect.getFields()) {
-      if (field.getType().isPrimitive() != null) continue;
+      String sourceName = field.getType().getQualifiedSourceName();
+      if (field.getType().isPrimitive() != null) {
+        sourceName = field.getType().isPrimitive().getQualifiedBoxedSourceName();
+      }
       
       String setterMethod = ReflectionUtil.isPublicWriteable(field, typeToReflect);
       if (setterMethod != null) {
         out.println("  if (propertyName.equals(\"" + field.getName() + "\")) {");
-        out.println("    instance."+setterMethod+"( (" + field.getType().getQualifiedSourceName() + ") value);");
+        out.println("    instance."+setterMethod+"( (" + sourceName + ") value);");
         out.println("  }");
       }
     }
