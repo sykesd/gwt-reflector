@@ -37,7 +37,7 @@ import java.lang.annotation.Annotation;
 
 /**
  * Provide a simple set of API methods, similar in form to Apache Commons BeanUtils PropertyUtils class
- * for setting/getting property values on instances of beans that implement {@link Reflectable}
+ * for setting/getting property values on instances of beans for which a {@link Reflector} instance exists.
  * 
  * @author David Sykes
  * @author Tomasz Orzechowski
