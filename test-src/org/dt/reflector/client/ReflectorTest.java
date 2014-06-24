@@ -1,6 +1,8 @@
 package org.dt.reflector.client;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
 
 import com.google.gwt.junit.client.GWTTestCase;
 
@@ -73,7 +75,27 @@ public class ReflectorTest extends GWTTestCase {
     assertEquals(0, new BigDecimal("123456789123456789").compareTo((BigDecimal) PropertyUtils.getProperty(bean, "largeValue")));
     assertEquals(new Integer(32000), PropertyUtils.getProperty(bean, "smallValue"));
   }
-  
+
+  public void testParameterizedTypeReflection() {
+    ComplexBean bean = createComplexBean();
+
+    Reflector r = ReflectionOracle.Util.getReflector(bean.getClass().getName());
+    assertEquals(List.class, r.type("beans"));
+    assertEquals(1, r.typeParameterCount("beans"));
+    assertEquals(SimpleBean.class, r.typeParameter("beans", 0));
+    assertNull(r.typeParameter("name", 0));
+
+    assertEquals(2, r.typeParameterCount("mappedBeans"));
+    assertEquals(String.class, r.typeParameter("mappedBeans", 0));
+    assertEquals(SimpleBean.class, r.typeParameter("mappedBeans", 1));
+    assertNull(r.typeParameter("mappedBeans", 2));
+
+    List<?> aList = (List<?>) r.get(bean, "beans");
+    Object o = aList.get(0);
+    r = ReflectionOracle.Util.getReflector(o.getClass().getName());
+    assertEquals("Test", r.get(o, "name"));
+  }
+
   private SimpleBean createSampleBean() {
     SimpleBean bean = new SimpleBean();
     bean.setName("Test");
@@ -89,4 +111,16 @@ public class ReflectorTest extends GWTTestCase {
     bean.setSmallValue(32000);
     return bean;
   }
+
+  private ComplexBean createComplexBean() {
+    ComplexBean complexBean = new ComplexBean();
+    complexBean.setName("Testing");
+
+    List<SimpleBean> beans = new ArrayList<SimpleBean>();
+    beans.add(createSampleBean());
+    complexBean.setBeans(beans);
+
+    return complexBean;
+  }
+
 }

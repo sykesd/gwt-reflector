@@ -5,19 +5,13 @@ import java.util.Set;
 import java.io.PrintWriter;
 import java.lang.annotation.Annotation;
 
+import com.google.gwt.core.ext.typeinfo.*;
 import org.dt.reflector.client.Reflector;
 
 import com.google.gwt.core.ext.Generator;
 import com.google.gwt.core.ext.GeneratorContext;
 import com.google.gwt.core.ext.TreeLogger;
 import com.google.gwt.core.ext.UnableToCompleteException;
-import com.google.gwt.core.ext.typeinfo.JAnnotationMethod;
-import com.google.gwt.core.ext.typeinfo.JAnnotationType;
-import com.google.gwt.core.ext.typeinfo.JClassType;
-import com.google.gwt.core.ext.typeinfo.JField;
-import com.google.gwt.core.ext.typeinfo.JMethod;
-import com.google.gwt.core.ext.typeinfo.JPrimitiveType;
-import com.google.gwt.core.ext.typeinfo.JType;
 import com.google.gwt.user.rebind.ClassSourceFileComposerFactory;
 import com.google.gwt.user.rebind.SourceWriter;
 
@@ -86,6 +80,8 @@ public class ReflectorGenerator extends Generator {
       composeConstructor(sourceWriter, typeToReflect);
       composeClassType(sourceWriter, typeToReflect);
       composePropertyType(sourceWriter, typeToReflect);
+      composePropertyTypeParameterCount(sourceWriter, typeToReflect);
+      composePropertyTypeParameter(sourceWriter, typeToReflect);
       composeHasAnnotations(sourceWriter, context, typeToReflect);
       composeList(sourceWriter, typeToReflect);
       composeGet(sourceWriter, typeToReflect);
@@ -167,6 +163,91 @@ public class ReflectorGenerator extends Generator {
     if (superType != null && !superType.getSimpleSourceName().equals("Object")) {
       composeTypeGetters(out, superType);
     }
+  }
+
+  private void composePropertyTypeParameterCount(SourceWriter out, JClassType typeToReflect) {
+    out.println("\n@Override");
+    out.println("public int typeParameterCount(String propertyName) {");
+
+    composeTypeParameterCountGetters(out, typeToReflect);
+
+    out.println("  return 0;");
+    out.println("}");
+  }
+
+  private void composeTypeParameterCountGetters(SourceWriter out, JClassType typeToReflect) {
+    for (JField field : typeToReflect.getFields()) {
+      String getterMethod = ReflectionUtil.isPublicReadable(field, typeToReflect);
+      if (getterMethod != null && field.getType().isParameterized() != null) {
+        JParameterizedType parameterType = field.getType().isParameterized();
+        out.println("  if (propertyName.equals(\"" + field.getName() + "\")) {");
+        out.println("    return " + parameterType.getTypeArgs().length + ";");
+        out.println("  }");
+      }
+    }
+
+    /*
+     * Recurse through all of the super classes to make sure we get a complete
+     * list of all the properties
+     */
+    JClassType superType = typeToReflect.getSuperclass();
+    if (superType != null && !superType.getSimpleSourceName().equals("Object")) {
+      composeTypeParameterCountGetters(out, superType);
+    }
+  }
+
+  private void composePropertyTypeParameter(SourceWriter out, JClassType typeToReflect) {
+    out.println("\n@Override");
+    out.println("public Class<?> typeParameter(String propertyName, int index) {");
+
+    composeTypeParameterGetters(out, typeToReflect);
+
+    out.println("  return null;");
+    out.println("}");
+  }
+
+  private void composeTypeParameterGetters(SourceWriter out, JClassType typeToReflect) {
+    for (JField field : typeToReflect.getFields()) {
+      String getterMethod = ReflectionUtil.isPublicReadable(field, typeToReflect);
+      if (getterMethod != null && field.getType().isParameterized() != null) {
+        JParameterizedType parameterType = field.getType().isParameterized();
+        JType[] typeArgs = parameterType.getTypeArgs();
+        if (typeArgs.length == 1) {
+          composeTypeParameterGetterOne(out, field, typeArgs[0]);
+        }
+        else {
+          composeTypeParameterGetterSwitch(out, field, typeArgs);
+        }
+      }
+    }
+
+    /*
+     * Recurse through all of the super classes to make sure we get a complete
+     * list of all the properties
+     */
+    JClassType superType = typeToReflect.getSuperclass();
+    if (superType != null && !superType.getSimpleSourceName().equals("Object")) {
+      composeTypeParameterGetters(out, superType);
+    }
+  }
+
+  private void composeTypeParameterGetterOne(SourceWriter out, JField field, JType type) {
+    out.println("  if (propertyName.equals(\"" + field.getName() + "\") && index == 0) {");
+    out.println("    return " + type.getQualifiedSourceName() + ".class;");
+    out.println("  }");
+  }
+
+  private void composeTypeParameterGetterSwitch(SourceWriter out, JField field, JType[] typeArgs) {
+    out.println("  if (propertyName.equals(\"" + field.getName() + "\")) {");
+    out.println("    switch(index) {");
+    for (int index = 0; index < typeArgs.length; index++) {
+      out.println("      case " + index + ":");
+      out.println("        return " + typeArgs[index].getQualifiedSourceName() + ".class;");
+    }
+    out.println("        default:");
+    out.println("          return null;");
+    out.println("    }");
+    out.println("  }");
   }
 
   private void _composeList(JClassType typeToReflect, Set<String> properties) {

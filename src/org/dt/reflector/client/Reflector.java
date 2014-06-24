@@ -69,7 +69,39 @@ public interface Reflector {
    * @return the type of that property
    */
   Class<?> type(String propertyName);
-  
+
+  /**
+   * Get the number of type parameters the type of the property of the given name has.
+   * <p>
+   *   If the type of the property is <code>String</code> this method will return 0. If the
+   *   type of the property is <code>List&lt;String&gt;</code> this method will return 1.
+   *   If the tpe of the property is <code>Map&lt;String,SomeBean&gt;</code> this method
+   *   will return 2. And so on.
+   * </p>
+   *
+   * @param propertyName the name of the property for which we want the number of type parameters for
+   * @return the number of type parameters
+   */
+  int typeParameterCount(String propertyName);
+
+  /**
+   * Get the type parameter type of the property of the given name.
+   * <p>
+   *   If the property you are reflecting on is of a parameterized type, this method will
+   *   let you get the concrete type of the type parameter in this case.
+   * </p>
+   * <p>
+   *   For example, if you have: <code>public List&lt;String&gt; getNames() {...}</code> then calling
+   *   <code>reflector.type("names")</code> will return <class>List.class</class>, but <code>reflector.typeParameter("names", 0)</code>
+   *   will return <code>String.class</code>.
+   * </p>
+   *
+   * @param propertyName the name of the property for which we want the type parameter's type
+   * @param index the index of the type parameter we want, 0-based
+   * @return the type parameter's type
+   */
+  Class<?> typeParameter(String propertyName, int index);
+
   /**
    * Check to see if the given property is annotated by the given annotation type.
    * 
