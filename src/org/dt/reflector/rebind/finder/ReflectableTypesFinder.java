@@ -21,6 +21,11 @@ public class ReflectableTypesFinder implements TypesToReflectFinder {
     for (JClassType type : context.getTypeOracle().getTypes()) {
       if (hasMarkerInterface(type, markerType) && !type.isAbstract()) {
         typesToReflect.add(new TypeToReflect(type));
+          for (JClassType nestedType : type.getNestedTypes()) {
+            if (hasMarkerInterface(nestedType, markerType) && !nestedType.isAbstract()) {
+              typesToReflect.add(new TypeToReflect(nestedType));
+            }
+          }
       }
     }
     

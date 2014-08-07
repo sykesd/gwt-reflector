@@ -88,7 +88,7 @@ public class ReflectionOracleGenerator extends Generator {
       
       out.println("\n@Override");
       out.println("public Reflector getReflector(String typeName) {");
-      
+      out.println("  typeName = typeName.replaceAll(\"\\\\$\", \".\");");
       for (TypeToReflect type : findTypesToReflect(logger, context)) {
         out.println("  if (\""+type.getQualifiedSourceName()+"\".equals(typeName)) return "+type.getCreateExpression()+";");
       }
