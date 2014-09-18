@@ -332,9 +332,12 @@ public class ReflectorGenerator extends Generator {
         
         Annotation[] annotations = field.getAnnotations();
         for (Annotation annotation : annotations) {
-          out.println("    if (annotationClass == "+annotation.annotationType().getName()+".class) {");
-          generateAnnotationImpl(out, context, annotation);
-          out.println("    }");
+          JClassType type = context.getTypeOracle().findType(annotation.annotationType().getName());
+          if(type != null) {
+            out.println("    if (annotationClass == " + annotation.annotationType().getName() + ".class) {");
+            generateAnnotationImpl(out, type, annotation);
+            out.println("    }");
+          }
         }
         
         out.println("  }");
@@ -347,8 +350,7 @@ public class ReflectorGenerator extends Generator {
     }
   }
   
-  private void generateAnnotationImpl(SourceWriter out, GeneratorContext context, Annotation annotation) {
-    JClassType rawAnnoType = context.getTypeOracle().findType(annotation.annotationType().getName());
+  private void generateAnnotationImpl(SourceWriter out, JClassType rawAnnoType, Annotation annotation) {
     JAnnotationType annoType = rawAnnoType.isAnnotation();
     
     out.println("  return (T) new "+annoType.getQualifiedSourceName()+"() {");
