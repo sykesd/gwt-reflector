@@ -90,6 +90,7 @@ public class ReflectorGenerator extends Generator {
       composeList(sourceWriter, typeToReflect);
       composeGet(sourceWriter, typeToReflect);
       composeSet(sourceWriter, typeToReflect);
+      composeDeepClone(sourceWriter, typeToReflect);
       sourceWriter.commit(logger);
     }
     
@@ -373,5 +374,81 @@ public class ReflectorGenerator extends Generator {
     }
     out.println("    };");
   }
-  
+
+  private void composeDeepClone(SourceWriter out, JClassType typeToReflect) {
+    out.println("@Override");
+    out.println("public Object deepClone(Object rawO) {");
+
+    out.println("  if (rawO == null) return null;");
+    out.println("  if (!(rawO instanceof "+typeToReflect.getQualifiedSourceName()+")) throw new IllegalArgumentException(\"Expected type "+typeToReflect.getQualifiedSourceName()+" but was given \"+rawO.getClass().getName());");
+
+    out.println("  "+typeToReflect.getQualifiedSourceName()+" src = ("+typeToReflect.getQualifiedSourceName()+") rawO;");
+    out.println("  "+typeToReflect.getQualifiedSourceName()+" dest = new "+typeToReflect.getQualifiedSourceName()+"();");
+
+    composeCloners(out, typeToReflect);
+
+    out.println("  return dest;");
+    out.println("}");
+  }
+
+  private void composeCloners(SourceWriter out, JClassType typeToReflect) {
+    for (JField field : typeToReflect.getFields()) {
+      String setterMethod = ReflectionUtil.isPublicWriteable(field, typeToReflect);
+      if (setterMethod == null) {
+        // we can't actually write this property - don't bother generating copy code for it
+        continue;
+      }
+
+      String getterMethod = ReflectionUtil.isPublicReadable(field, typeToReflect);
+      if (getterMethod == null) {
+        // unlikely, but here for defensiveness/completion - public writeable but NOT readable
+        continue;
+      }
+
+
+      String sourceName = field.getType().getQualifiedSourceName();
+      if (field.getType().isPrimitive() != null
+              || "java.lang.String".equals(sourceName)
+              || "java.lang.Byte".equals(sourceName)
+              || "java.lang.Short".equals(sourceName)
+              || "java.lang.Integer".equals(sourceName)
+              || "java.lang.Long".equals(sourceName)
+              || "java.lang.Float".equals(sourceName)
+              || "java.lang.Double".equals(sourceName)
+              || "java.lang.BigInteger".equals(sourceName)
+              || "java.math.BigDecimal".equals(sourceName)
+              || "java.util.Timestamp".equals(sourceName)
+              || "java.util.Date".equals(sourceName)
+              ) {
+        // this is an immutable type that we know how to handle - just copy the value directly
+        out.println("  dest."+setterMethod+"( src."+getterMethod+"() );");
+      }
+
+      else if ("java.util.Collection".equals(sourceName)) {
+        field.getType().isParameterized().getTypeArgs();
+        out.println("  dest."+setterMethod+"( org.dt.reflector.client.PropertyUtils.deepCloneList(src."+getterMethod+"()) );");
+      }
+      else if ("java.util.List".equals(sourceName)) {
+        out.println("  dest."+setterMethod+"( org.dt.reflector.client.PropertyUtils.deepCloneList(src."+getterMethod+"()) );");
+      }
+      else if ("java.util.ArrayList".equals(sourceName)) {
+        out.println("  dest."+setterMethod+"( org.dt.reflector.client.PropertyUtils.deepCloneArrayList(src."+getterMethod+"()) );");
+      }
+      else if ("java.util.Set".equals(sourceName)) {
+        out.println("  dest."+setterMethod+"( org.dt.reflector.client.PropertyUtils.deepCloneSet(src."+getterMethod+"()) );");
+      }
+      else if ("java.util.HashSet".equals(sourceName)) {
+        out.println("  dest."+setterMethod+"( org.dt.reflector.client.PropertyUtils.deepCloneHashSet(src."+getterMethod+"()) );");
+      }
+
+      else {
+        out.println("  dest."+setterMethod+"( ("+sourceName+") org.dt.reflector.client.PropertyUtils.deepClone(src."+getterMethod+"()) );");
+      }
+    }
+
+    JClassType superType = typeToReflect.getSuperclass();
+    if (superType != null && !superType.getSimpleSourceName().equals("Object")) {
+      composeCloners(out, superType);
+    }
+  }
 }

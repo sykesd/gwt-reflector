@@ -129,4 +129,23 @@ public interface Reflector {
    */
   void set(Object o, String propertyName, Object value);
 
+  /**
+   * Make a deep-copy of the given {@link Object}.
+   * <p>
+   *   We assume that <code>o</code> is an instance the type this instance is
+   *   reflecting. If not, then this method will return <code>null</code>.
+   * </p>
+   * <p>
+   *   The implementations of this method will only return deep copies of
+   *   complex sub-types if they are also reflectable.
+   * </p>
+   * <p>
+   *   Support for {@link java.util.Collection}-type attributes will also
+   *   be generated. If the elements are of a reflectable type, then deep-copies
+   *   of the elements will also be made.
+   * </p>
+   * @param o
+   * @return
+   */
+  Object deepClone(Object o);
 }

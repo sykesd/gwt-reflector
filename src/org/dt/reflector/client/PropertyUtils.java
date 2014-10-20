@@ -1,6 +1,7 @@
 package org.dt.reflector.client;
 
 import java.lang.annotation.Annotation;
+import java.util.*;
 
 /*
  * Copyright (c) 2011-2014, David Sykes and Tomasz Orzechowski 
@@ -109,5 +110,67 @@ public class PropertyUtils {
    */
   public static Reflector getReflector(Class<?> type) {
     return ReflectionOracle.Util.getReflector(type.getName());
+  }
+
+  /**
+   * Convenience method to make a deep clone of a given type.
+   * <p>
+   *   WARNING: This method may not actually return a deep copy, if the type of <code>o</code> is not reflectable.
+   *   It is assumed the caller is aware of this restriction and uses this method accordingly.
+   * </p>
+   * <p>
+   *   If the type of <code>o</code> is reflectable then a deep clone will be made using its {@link org.dt.reflector.client.Reflector}.
+   *   However, if <code>o</code> is not of a reflectable type, then <code>o</code> itself is returned.
+   * </p>
+   *
+   * @param o the {@link Object} to make a deep clone of
+   * @return a deep copy of <code>o</code>
+   */
+  public static final <T> T deepClone(Object o) {
+    if (o == null) {
+      // can't determine its type - nothing we can do
+      return null;
+    }
+
+    Reflector reflector = getReflector(o.getClass());
+    if (reflector == null) {
+      return (T)o;
+    }
+
+    return (T)reflector.deepClone(o);
+  }
+
+  public static final <T> List<T> deepCloneList(Collection<T> src) {
+    if (src == null) return null;
+    List<T> dest = new ArrayList<T>();
+    deepCloneCollection(src, dest);
+    return dest;
+  }
+
+  public static final <T> ArrayList<T> deepCloneArrayList(ArrayList<T> src) {
+    if (src == null) return null;
+    ArrayList<T> dest = new ArrayList<T>();
+    deepCloneCollection(src, dest);
+    return dest;
+  }
+
+  public static final <T> Set<T> deepCloneSet(Set<T> src) {
+    if (src == null) return null;
+    Set<T> dest = new HashSet<T>();
+    deepCloneCollection(src, dest);
+    return dest;
+  }
+
+  public static final <T> HashSet<T> deepCloneHashSet(HashSet<T> src) {
+    if (src == null) return null;
+    HashSet<T> dest = new HashSet<T>();
+    deepCloneCollection(src, dest);
+    return dest;
+  }
+
+  public static final <T> void deepCloneCollection(Collection<T> src, Collection<T> dest) {
+    for (Object e : src) {
+      dest.add((T) deepClone(e));
+    }
   }
 }
