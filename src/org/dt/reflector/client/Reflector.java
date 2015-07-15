@@ -71,16 +71,25 @@ public interface Reflector {
   Class<?> type(String propertyName);
   
   /**
-   * Check to see if the given property is annotated by the given annotation type.
+   * Check to see if the type is annotated by the given annotation type.
    * 
    * TODO describe what retention type we support
-   * 
+   *
+   * @param annotationClass the annotation we are checking for
+   * @return the annotation instance if the property has one, or null of the property is annotated by the given annotation
+   */
+  <T extends Annotation> T hasAnnotation(Class<T> annotationClass);
+
+  /**
+   * Check to see if the given property is annotated by the given annotation type.
+   *
+   * TODO describe what retention type we support
+   *
    * @param propertyName the property we wish to check
    * @param annotationClass the annotation we are checking for
    * @return the annotation instance if the property has one, or null of the property is annotated by the given annotation
    */
   <T extends Annotation> T hasAnnotation(String propertyName, Class<T> annotationClass);
-
 
   /**
    * <p>Create a new instance of type</p>

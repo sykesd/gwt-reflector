@@ -89,6 +89,7 @@ public class ReflectorGenerator extends Generator {
       composeSubClasses(sourceWriter, typeToReflect);
       composeClassType(sourceWriter, typeToReflect);
       composePropertyType(sourceWriter, typeToReflect);
+      composeHasTypeAnnotations(sourceWriter, context, typeToReflect);
       composeHasAnnotations(sourceWriter, context, typeToReflect);
       composeList(sourceWriter, typeToReflect);
       composeGet(sourceWriter, typeToReflect);
@@ -339,11 +340,28 @@ public class ReflectorGenerator extends Generator {
   }
 
   /**
-   * Generate the implementation of Reflector.hasAnnotation(String, Class)
+   * Generate the implementation of Reflector.hasAnnotation(Class)
    * 
+   * @param out the writer on which we are generating the source
+   * @param context the generation context
+   * @param typeToReflect the type we are reflecting
+   */
+  private void composeHasTypeAnnotations(SourceWriter out, GeneratorContext context, JClassType typeToReflect) {
+    out.println("\n@Override");
+    out.println("public <T extends Annotation> T hasAnnotation(Class<T> annotationClass) {");
+    
+    composeAnnotationsType(out, context, typeToReflect);
+    
+    out.println("  return null;");
+    out.println("}");
+  }
+
+  /**
+   * Generate the implementation of Reflector.hasAnnotation(String, Class)
+   *
    * We take a very simple approach and generate a list of if statements that look
    * for the requested property name and then call the public setter for that property
-   * 
+   *
    * @param out the writer on which we are generating the source
    * @param context the generation context
    * @param typeToReflect the type we are reflecting
@@ -351,9 +369,9 @@ public class ReflectorGenerator extends Generator {
   private void composeHasAnnotations(SourceWriter out, GeneratorContext context, JClassType typeToReflect) {
     out.println("\n@Override");
     out.println("public <T extends Annotation> T hasAnnotation(String propertyName, Class<T> annotationClass) {");
-    
+
     composeAnnotationGetters(out, context, typeToReflect);
-    
+
     out.println("  return null;");
     out.println("}");
   }
@@ -381,6 +399,22 @@ public class ReflectorGenerator extends Generator {
     JClassType superType = typeToReflect.getSuperclass();
     if (superType != null && !superType.getSimpleSourceName().equals("Object")) {
       composeAnnotationGetters(out, context, superType);
+    }
+  }
+
+  private void composeAnnotationsType(SourceWriter out, GeneratorContext context, JClassType typeToReflect) {
+      for (Annotation annotation : typeToReflect.getAnnotations()) {
+        JClassType type = context.getTypeOracle().findType(annotation.annotationType().getName());
+        if(type != null) {
+          out.println("    if (annotationClass == " + annotation.annotationType().getName() + ".class) {");
+          generateAnnotationImpl(out, type, annotation);
+          out.println("    }");
+        }
+      }
+
+    JClassType superType = typeToReflect.getSuperclass();
+    if (superType != null && !superType.getSimpleSourceName().equals("Object")) {
+      composeAnnotationsType(out, context, superType);
     }
   }
   
