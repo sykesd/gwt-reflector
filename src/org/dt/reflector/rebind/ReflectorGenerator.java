@@ -18,6 +18,7 @@ import com.google.gwt.core.ext.typeinfo.JField;
 import com.google.gwt.core.ext.typeinfo.JMethod;
 import com.google.gwt.core.ext.typeinfo.JPrimitiveType;
 import com.google.gwt.core.ext.typeinfo.JType;
+import com.google.gwt.core.ext.typeinfo.TypeOracle;
 import com.google.gwt.user.rebind.ClassSourceFileComposerFactory;
 import com.google.gwt.user.rebind.SourceWriter;
 
@@ -84,6 +85,8 @@ public class ReflectorGenerator extends Generator {
       SourceWriter sourceWriter = composerFactory.createSourceWriter(context, printWriter);
       
       composeConstructor(sourceWriter, typeToReflect);
+      composeIsAbstract(sourceWriter, typeToReflect);
+      composeSubClasses(sourceWriter, typeToReflect);
       composeClassType(sourceWriter, typeToReflect);
       composePropertyType(sourceWriter, typeToReflect);
       composeHasAnnotations(sourceWriter, context, typeToReflect);
@@ -110,7 +113,7 @@ public class ReflectorGenerator extends Generator {
   private void composeConstructor(SourceWriter out, JClassType typeToReflect) {
     if (ReflectionUtil.hasPublicNoArgsConstructor(typeToReflect)) {
       out.println("\n@Override");
-      out.println("public Object newInstance() { return new "+typeToReflect.getQualifiedSourceName()+"(); }");
+      out.println("public Object newInstance() { return new " + typeToReflect.getQualifiedSourceName() + "(); }");
       return;
     }
     
@@ -119,7 +122,37 @@ public class ReflectorGenerator extends Generator {
     out.println("\n@Override");
     out.println("public Object newInstance() { throw new RuntimeException(\"No public no-args constructor!\"); }");
   }
-  
+
+  /**
+   * Generate the implementation of Reflector.isAbstract(), which returns true if the type is abstract
+   *
+   * @param out the writer on which we are generating the source
+   * @param typeToReflect the type we are reflecting
+   */
+  private void composeIsAbstract(SourceWriter out, JClassType typeToReflect) {
+    out.println("\n@Override");
+    out.println("public boolean isAbstract() { return " + (typeToReflect.isAbstract() ? "true" : "false") + "; }");
+  }
+
+
+  /**
+   * Generate the implementation of Reflector.isAbstract(), which returns true if the type is abstract
+   *  @param out the writer on which we are generating the source
+   * @param typeToReflect the type we are reflecting
+   * @param typeOracle
+   */
+  private void composeSubClasses(SourceWriter out, JClassType typeToReflect) {
+    JClassType[] subtypes = typeToReflect.getSubtypes();
+    out.println("private static final Class<?>[] __subclasses = new Class<?>[] {");
+    for (JClassType subtype : subtypes) {
+      out.println(subtype.getQualifiedSourceName() + ".class,");
+    }
+    out.println("};");
+    out.println("\n@Override");
+    out.println("public Class<?>[] getSubClasses() { return __subclasses; }");
+  }
+
+
   /**
    * Generate the implementation of Reflector.type(), which returns the type we are reflecting
    * 
@@ -378,19 +411,25 @@ public class ReflectorGenerator extends Generator {
   }
 
   private void composeDeepClone(SourceWriter out, JClassType typeToReflect) {
-    out.println("@Override");
-    out.println("public Object deepClone(Object rawO) {");
+    if (ReflectionUtil.hasPublicNoArgsConstructor(typeToReflect)) {
+      out.println("@Override");
+      out.println("public Object deepClone(Object rawO) {");
 
-    out.println("  if (rawO == null) return null;");
-    out.println("  if (!(rawO instanceof "+typeToReflect.getQualifiedSourceName()+")) throw new IllegalArgumentException(\"Expected type "+typeToReflect.getQualifiedSourceName()+" but was given \"+rawO.getClass().getName());");
+      out.println("  if (rawO == null) return null;");
+      out.println("  if (!(rawO instanceof " + typeToReflect.getQualifiedSourceName() + ")) throw new IllegalArgumentException(\"Expected type " + typeToReflect.getQualifiedSourceName() + " but was given \"+rawO.getClass().getName());");
 
-    out.println("  "+typeToReflect.getQualifiedSourceName()+" src = ("+typeToReflect.getQualifiedSourceName()+") rawO;");
-    out.println("  "+typeToReflect.getQualifiedSourceName()+" dest = new "+typeToReflect.getQualifiedSourceName()+"();");
+      out.println("  " + typeToReflect.getQualifiedSourceName() + " src = (" + typeToReflect.getQualifiedSourceName() + ") rawO;");
+      out.println("  " + typeToReflect.getQualifiedSourceName() + " dest = new " + typeToReflect.getQualifiedSourceName() + "();");
 
-    composeCloners(out, typeToReflect);
+      composeCloners(out, typeToReflect);
 
-    out.println("  return dest;");
-    out.println("}");
+      out.println("  return dest;");
+      out.println("}");
+      return;
+    }
+
+    out.println("\n@Override");
+    out.println("public Object deepClone(Object rawO) { throw new RuntimeException(\"No public no-args constructor!\"); }");
   }
 
   private void composeCloners(SourceWriter out, JClassType typeToReflect) {

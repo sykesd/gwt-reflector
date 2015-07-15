@@ -93,6 +93,20 @@ public interface Reflector {
    * @return a new instance of the type
    */
   Object newInstance();
+
+  /**
+   * <p>The type is abstract</p>
+   *
+   * @return true if the type is abstract
+   */
+  boolean isAbstract();
+
+  /**
+   * <p>Return the collection of direct subclasses</p>
+   *
+   * @return the collection of subclasses
+   */
+  Class<?>[] getSubClasses();
   
   /**
    * List properties from the given instance
