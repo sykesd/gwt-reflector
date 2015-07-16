@@ -18,6 +18,7 @@ import com.google.gwt.core.ext.typeinfo.JField;
 import com.google.gwt.core.ext.typeinfo.JMethod;
 import com.google.gwt.core.ext.typeinfo.JPrimitiveType;
 import com.google.gwt.core.ext.typeinfo.JType;
+import com.google.gwt.core.ext.typeinfo.JTypeParameter;
 import com.google.gwt.core.ext.typeinfo.TypeOracle;
 import com.google.gwt.user.rebind.ClassSourceFileComposerFactory;
 import com.google.gwt.user.rebind.SourceWriter;
@@ -99,6 +100,15 @@ public class ReflectorGenerator extends Generator {
     }
     
     return implPackageName + "." + implTypeName;    
+  }
+
+  private static JType getFieldBaseType(JField field) {
+    JType type = field.getType();
+    JTypeParameter typeParameter = type.isTypeParameter();
+    if(typeParameter != null) {
+      return typeParameter.getBaseType();
+    }
+    return type;
   }
   
   /**
@@ -189,7 +199,7 @@ public class ReflectorGenerator extends Generator {
       String getterMethod = ReflectionUtil.isPublicReadable(field, typeToReflect);
       if (getterMethod != null) {
         out.println("  if (propertyName.equals(\"" + field.getName() + "\")) {");
-        out.println("    return " + field.getType().getQualifiedSourceName()+ ".class;");
+        out.println("    return " + getFieldBaseType(field).getQualifiedSourceName()+ ".class;");
         out.println("  }");
       }
     }
@@ -276,8 +286,8 @@ public class ReflectorGenerator extends Generator {
     for (JField field : typeToReflect.getFields()) {
       String wrapBegin = "";
       String wrapEnd = "";
-      if (field.getType().isPrimitive() != null) {
-        wrapBegin = "new " + field.getType().isPrimitive().getQualifiedBoxedSourceName() + "(";
+      if (getFieldBaseType(field).isPrimitive() != null) {
+        wrapBegin = "new " + getFieldBaseType(field).isPrimitive().getQualifiedBoxedSourceName() + "(";
         wrapEnd = ")";
       }
       String getterMethod = ReflectionUtil.isPublicReadable(field, typeToReflect);
@@ -320,9 +330,9 @@ public class ReflectorGenerator extends Generator {
 
   private void composeSetters(SourceWriter out, JClassType typeToReflect) {
     for (JField field : typeToReflect.getFields()) {
-      String sourceName = field.getType().getQualifiedSourceName();
-      if (field.getType().isPrimitive() != null) {
-        sourceName = field.getType().isPrimitive().getQualifiedBoxedSourceName();
+      String sourceName = getFieldBaseType(field).getQualifiedSourceName();
+      if (getFieldBaseType(field).isPrimitive() != null) {
+        sourceName = getFieldBaseType(field).isPrimitive().getQualifiedBoxedSourceName();
       }
       
       String setterMethod = ReflectionUtil.isPublicWriteable(field, typeToReflect);
@@ -481,8 +491,8 @@ public class ReflectorGenerator extends Generator {
       }
 
 
-      String sourceName = field.getType().getQualifiedSourceName();
-      if (field.getType().isPrimitive() != null
+      String sourceName = getFieldBaseType(field).getQualifiedSourceName();
+      if (getFieldBaseType(field).isPrimitive() != null
               || "java.lang.String".equals(sourceName)
               || "java.lang.Byte".equals(sourceName)
               || "java.lang.Short".equals(sourceName)
@@ -500,7 +510,7 @@ public class ReflectorGenerator extends Generator {
       }
 
       else if ("java.util.Collection".equals(sourceName)) {
-        field.getType().isParameterized().getTypeArgs();
+        getFieldBaseType(field).isParameterized().getTypeArgs();
         out.println("  dest."+setterMethod+"( org.dt.reflector.client.PropertyUtils.deepCloneList(src."+getterMethod+"()) );");
       }
       else if ("java.util.List".equals(sourceName)) {
