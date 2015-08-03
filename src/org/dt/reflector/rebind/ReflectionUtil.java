@@ -16,7 +16,7 @@ public class ReflectionUtil {
    */
   public static boolean hasPublicNoArgsConstructor(JClassType type) {
     JConstructor constructor = type.findConstructor(new JClassType[]{});
-    return constructor != null && constructor.isPublic();
+    return constructor != null && constructor.isPublic() && !type.isAbstract();
   }
   
   /**
