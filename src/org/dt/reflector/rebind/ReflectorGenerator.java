@@ -86,6 +86,7 @@ public class ReflectorGenerator extends Generator {
       SourceWriter sourceWriter = composerFactory.createSourceWriter(context, printWriter);
       
       composeConstructor(sourceWriter, typeToReflect);
+      composeArrayConstructor(sourceWriter, typeToReflect);
       composeIsAbstract(sourceWriter, typeToReflect);
       composeSubClasses(sourceWriter, typeToReflect);
       composeClassType(sourceWriter, typeToReflect);
@@ -132,6 +133,12 @@ public class ReflectorGenerator extends Generator {
     // it will still be possible to reflect on an instance, assuming you get the instance from somewhere else
     out.println("\n@Override");
     out.println("public Object newInstance() { throw new RuntimeException(\"No public no-args constructor!\"); }");
+  }
+
+  private void composeArrayConstructor(SourceWriter out, JClassType typeToReflect) {
+    out.println("\n@Override");
+    out.println("public Object[] newArray(int length) { return new " + typeToReflect.getQualifiedSourceName() + "[length]; }");
+    return;
   }
 
   /**
