@@ -5,10 +5,6 @@
 
   <!-- Other module inherits                                      -->
 
-  <generate-with class="org.dt.reflector.rebind.ReflectorGenerator">
-    <when-type-assignable class="org.dt.reflector.client.Reflectable" />
-  </generate-with>
-
   <generate-with class="org.dt.reflector.rebind.ReflectionOracleGenerator">
     <when-type-assignable class="org.dt.reflector.client.ReflectionOracle" />
   </generate-with>

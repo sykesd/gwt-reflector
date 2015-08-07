@@ -4,6 +4,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 import org.dt.reflector.client.Reflectable;
+import org.dt.reflector.rebind.ReflectorGenerator;
 
 import com.google.gwt.core.ext.GeneratorContext;
 import com.google.gwt.core.ext.TreeLogger;
@@ -20,10 +21,10 @@ public class ReflectableTypesFinder implements TypesToReflectFinder {
     
     for (JClassType type : context.getTypeOracle().getTypes()) {
       if (hasMarkerInterface(type, markerType)) {
-        typesToReflect.add(new TypeToReflect(type));
+        typesToReflect.add(getTypeToReflect(logger, context, type));
           for (JClassType nestedType : type.getNestedTypes()) {
             if (hasMarkerInterface(nestedType, markerType)) {
-              typesToReflect.add(new TypeToReflect(nestedType));
+              typesToReflect.add(getTypeToReflect(logger, context, nestedType));
             }
           }
       }
@@ -32,6 +33,11 @@ public class ReflectableTypesFinder implements TypesToReflectFinder {
     return typesToReflect;
   }
 
+  private TypeToReflect getTypeToReflect(TreeLogger logger, GeneratorContext context, JClassType type) throws UnableToCompleteException {
+    String qualifiedSourceName = type.getQualifiedSourceName();
+    String reflectorQualifiedSourceName = new ReflectorGenerator().generate(logger, context, qualifiedSourceName);
+    return new TypeToReflect(qualifiedSourceName, reflectorQualifiedSourceName);
+  }
 
   private JClassType getMarkerInterface(GeneratorContext context) {
     return context.getTypeOracle().findType(Reflectable.class.getName());
