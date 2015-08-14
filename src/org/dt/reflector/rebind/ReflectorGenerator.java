@@ -397,9 +397,14 @@ public class ReflectorGenerator extends Generator {
     for (JField field : typeToReflect.getFields()) {
       String getterMethod = ReflectionUtil.isPublicReadable(field, typeToReflect);
       if (getterMethod != null) {
-        out.println("  if (propertyName.equals(\"" + field.getName() + "\")) {");
-        
         Annotation[] annotations = field.getAnnotations();
+        if (annotations == null || annotations.length == 0) {
+          // this field does not actually have any annotations, don't bother generating a case for it
+          continue;
+        }
+
+        out.println("  if (propertyName.equals(\"" + field.getName() + "\")) {");
+
         for (Annotation annotation : annotations) {
           JClassType type = context.getTypeOracle().findType(annotation.annotationType().getName());
           if(type != null) {
