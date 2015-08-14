@@ -1,5 +1,5 @@
 package org.dt.reflector.client;
 
 public class Version {
-  public static final String getVersion() { return "0.4.2-USS-SNAPSHOT"; }
+  public static final String getVersion() { return "0.5"; }
 }
