@@ -104,6 +104,13 @@ public interface Reflector {
   Object newInstance();
 
   /**
+   * <p>Create a new array instance of type</p>
+   *
+   * @return a new array of the type
+   */
+  Object[] newArray(int length);
+
+  /**
    * <p>The type is abstract</p>
    *
    * @return true if the type is abstract
