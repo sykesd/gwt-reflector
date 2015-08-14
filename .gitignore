@@ -10,6 +10,10 @@ test-reports/
 lib/
 classes/
 
+
+# Build products
+gwt-reflector*.jar
+
 #################
 ## IntelliJ IDEA
 #################
