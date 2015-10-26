@@ -13,6 +13,9 @@
   <!-- and at the same time define the default type finder so that it is always present -->
   <define-configuration-property name="org.dt.reflector.rebind.finder.typefinder" is-multi-valued="true" />
   <extend-configuration-property name="org.dt.reflector.rebind.finder.typefinder" value="org.dt.reflector.rebind.finder.ReflectableTypesFinder" />
+
+  <define-configuration-property name="org.dt.reflector.rebind.finder.ReflectableTypesFinder.type" is-multi-valued="true" />
+  <extend-configuration-property name="org.dt.reflector.rebind.finder.ReflectableTypesFinder.type" value="org.dt.reflector.client.Reflectable" />
   
   <!-- Specify the paths for translatable code                    -->
   <source path='client'/>
