@@ -1,10 +1,14 @@
 package org.dt.reflector.rebind.finder;
 
 import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Set;
 
-import org.dt.reflector.client.Reflectable;
+import org.dt.reflector.rebind.ReflectorGenerator;
 
+import com.google.gwt.core.ext.BadPropertyValueException;
+import com.google.gwt.core.ext.ConfigurationProperty;
 import com.google.gwt.core.ext.GeneratorContext;
 import com.google.gwt.core.ext.TreeLogger;
 import com.google.gwt.core.ext.UnableToCompleteException;
@@ -12,29 +16,47 @@ import com.google.gwt.core.ext.typeinfo.JClassType;
 
 public class ReflectableTypesFinder implements TypesToReflectFinder {
 
+  private static final String REFLECTOR_TYPE_PROPERTY = "org.dt.reflector.rebind.finder.ReflectableTypesFinder.type";
+
   @Override
   public Set<TypeToReflect> findTypes(TreeLogger logger, GeneratorContext context) throws UnableToCompleteException {
     Set<TypeToReflect> typesToReflect = new HashSet<TypeToReflect>();
-    
-    JClassType markerType = getMarkerInterface(context);
-    
-    for (JClassType type : context.getTypeOracle().getTypes()) {
-      if (hasMarkerInterface(type, markerType)) {
-        typesToReflect.add(new TypeToReflect(type));
-          for (JClassType nestedType : type.getNestedTypes()) {
-            if (hasMarkerInterface(nestedType, markerType)) {
-              typesToReflect.add(new TypeToReflect(nestedType));
+
+    try {
+      List<JClassType> markerTypes = getMarkerInterfaces(context);
+      for (JClassType type : context.getTypeOracle().getTypes()) {
+        for(JClassType markerType: markerTypes) {
+          if (hasMarkerInterface(type, markerType)) {
+            typesToReflect.add(getTypeToReflect(logger, context, type));
+            for (JClassType nestedType : type.getNestedTypes()) {
+              if (hasMarkerInterface(nestedType, markerType)) {
+                typesToReflect.add(getTypeToReflect(logger, context, nestedType));
+              }
             }
           }
+        }
       }
+    } catch (BadPropertyValueException e) {
+      logger.log(TreeLogger.Type.ERROR, "Error reading configuration property: " + REFLECTOR_TYPE_PROPERTY, e);
+      throw new UnableToCompleteException();
     }
     
     return typesToReflect;
   }
 
+  private TypeToReflect getTypeToReflect(TreeLogger logger, GeneratorContext context, JClassType type) throws UnableToCompleteException {
+    String qualifiedSourceName = type.getQualifiedSourceName();
+    String reflectorQualifiedSourceName = new ReflectorGenerator().generate(logger, context, qualifiedSourceName);
+    return new TypeToReflect(qualifiedSourceName, reflectorQualifiedSourceName);
+  }
 
-  private JClassType getMarkerInterface(GeneratorContext context) {
-    return context.getTypeOracle().findType(Reflectable.class.getName());
+  private List<JClassType> getMarkerInterfaces(GeneratorContext context) throws BadPropertyValueException {
+    List<JClassType> classTypes = new LinkedList<JClassType>();
+    ConfigurationProperty configurationProperty = context.getPropertyOracle().getConfigurationProperty(REFLECTOR_TYPE_PROPERTY);
+    for (String s : configurationProperty.getValues()) {
+      classTypes.add(context.getTypeOracle().findType(s));
+    }
+    return classTypes;
   }
   
   /**

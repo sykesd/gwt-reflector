@@ -75,7 +75,7 @@ public class ReflectionOracleGenerator extends Generator {
     JClassType oracleType = context.getTypeOracle().findType(typeName);
     
     String implPackageName = oracleType.getPackage().getName();
-    String implTypeName = oracleType.getSimpleSourceName()+"_OracleImpl";
+    String implTypeName = oracleType.getName()+"_OracleImpl";
     
     ClassSourceFileComposerFactory composerFactory = new ClassSourceFileComposerFactory(implPackageName, implTypeName);
 

@@ -45,7 +45,7 @@ public class TypeToReflect {
   }
   
   public String getDeferredCreateExpression() {
-    return "GWT.create("+qualifiedSourceName+".class)";
+    return "GWT.create("+reflectorQualifiedSourceName+".class)";
   }
   
   public String getImmediateCreateExpression() {
